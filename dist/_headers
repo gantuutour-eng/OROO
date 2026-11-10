@@ -3,3 +3,8 @@
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+/activate
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
