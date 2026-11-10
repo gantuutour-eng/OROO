@@ -35,6 +35,14 @@ This is an initial server-backed release, not a claim of nationwide capacity or 
 - Photos never enter D1 rows or localStorage as base64 in cloud mode. Browser drafts contain form values and same-origin media references, scoped to the signed-in user. Local prototype records remain isolated.
 - Request IDs, Server-Timing and sampled Worker observability support diagnosis without logging bodies, passwords or session tokens. Inspect resource metrics and configure operational alerts before public launch.
 
+## Editorial content
+
+`migrations/0002_journal.sql` adds journal articles and their image attachments. Only platform administrators can create, preview privately, edit, publish or archive articles; moderator and consumer roles cannot write editorial content. All writes require the existing session, Origin and CSRF checks. Structured plain-text blocks are escaped on output; source links must use HTTPS.
+
+Public list queries use indexed, bounded keyset pages and omit full bodies. The home requests three featured published articles. Article responses use no-store; the frontend refreshes its public cache after 30 seconds and on returning to the home tab. Every image read checks the current article status before using an edge-cached object. Previously loaded browser images can remain available for up to 60 seconds.
+
+Articles allow at most 60 blocks, 30,000 text characters and 12 distinct images. Images use the existing JPEG upload limits. Attachment changes, revision compare-and-swap and audit writes are atomic. Linked article images are retained even when archived; detached images expire after 48 hours. Orphan cleanup first leases a bounded batch, with database triggers preventing an article/listing from attaching a leased object during deletion. Archives can be edited and republished; there is no irreversible article-delete endpoint.
+
 ## Migrations and recovery
 
 The initial schema can be applied in the D1 console. For subsequent releases, use `npx wrangler d1 migrations apply DB --remote` with an appropriately scoped deployment identity, then `npx wrangler deploy`. Do not create a new production database on every build. Never modify unrelated account databases/buckets.

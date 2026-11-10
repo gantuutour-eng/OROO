@@ -1,0 +1,17 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const {context,check}=require('./verify.cjs');
+context.window.OROO_CONFIG={mode:'cloud'};context.URLSearchParams=URLSearchParams;context.crypto=require('node:crypto').webcrypto;context.document.documentElement={classList:{contains(){return false}}};
+context.cloudAPI=()=>new Promise(()=>{});context.cloudPage=(title,content)=>'<main><h1>'+title+'</h1>'+content+'</main>';context.cloudGate=()=>'<p>Login required</p>';context.cloudError=e=>e.message;context.cloudInvalidate=()=>{};
+vm.runInContext(fs.readFileSync('dist/journal.js','utf8'),context);
+const ui=context.window.orooJournal;
+for(const name of ['save','upload','preview','savedPreview','archive','more','refresh','addBlock','moveBlock','removeBlock'])assert.equal(typeof ui[name],'function',name);
+const id='11111111-1111-1111-1111-111111111111',item={id,title:'<img src=x onerror=alert(1)>',excerpt:'A & B',category:'Зөвлөгөө',author:'<script>author</script>',coverId:id,publishedAt:'2026-11-10T00:00:00.000Z',coverCaption:'<b>Caption</b>',blocks:[{type:'p',text:'First <script>alert(1)</script>'},{type:'h2',text:'Second heading'},{type:'quote',text:'Third quote'},{type:'image',mediaId:id,caption:'Fourth image',alt:'" onerror="alert(1)'}],sourceUrl:'javascript:alert(1)',sourceName:'Unsafe'};
+const html=ui.reader(item);
+assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'));assert.ok(html.includes('&lt;script&gt;author&lt;/script&gt;'));assert.ok(html.includes('&lt;b&gt;Caption&lt;/b&gt;'));assert.ok(!html.includes('<script>'));assert.ok(!html.includes('href="javascript:'));assert.ok(html.includes('alt="&quot; onerror=&quot;alert(1)"'));
+assert.ok(html.indexOf('First &lt;script&gt;')<html.indexOf('<h2>Second heading'));assert.ok(html.indexOf('Second heading')<html.indexOf('Third quote'));assert.ok(html.indexOf('Third quote')<html.indexOf('Fourth image'));
+assert.ok(ui.reader({...item,sourceUrl:'https://example.com/article?a=1&b=2',sourceName:'Source'}).includes('href="https://example.com/article?a=1&amp;b=2" target="_blank" rel="noopener noreferrer"'));
+const preview=ui.reader(item,{preview:true});assert.ok(preview.includes('УРЬДЧИЛСАН ХАРАГДАЦ'));assert.ok(!preview.includes('journal-article-footer'));
+const card=ui.card({...item,cover:{thumbUrl:'/api/media/'+id+'/thumb'}});assert.ok(card.includes('href="#/journal/'+id+'"'));assert.ok(card.includes('loading="lazy"'));assert.ok(!card.includes('<img src=x'));
+context.location.hash='#/';const home=check('home()');assert.ok(home.includes('id="oroo-journal-home"'));assert.ok(!home.includes('ӨРӨӨ JOURNAL · 01'));assert.ok(home.includes('Таны дараагийн орон зай энд байна'));
+assert.ok(check("flowRoute(['journal'])").includes('Орон зайгаа илүү сайн таньж мэдээрэй.'));assert.equal(check("flowRoute(['article','0'])"),null,'Legacy guides remain delegated to the existing renderer');
+console.log('PASS: JOURNAL public routes, home replacement, structured block order, safe text/source rendering, private preview and exported asynchronous handlers.');

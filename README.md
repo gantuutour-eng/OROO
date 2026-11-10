@@ -19,13 +19,19 @@ Use Node 24.12.0 (see .nvmrc). Run:
 
     node verify-all.cjs
 
-There are 16 verification suites. The server suite executes real SQLite/FTS constraints and 71 synthetic HTTP requests covering authorization, CSRF, photo isolation, transactions, retry idempotency, keyset pagination, two-reviewer approval, one-use activation and account closure. Prototype suites continue to run in local mode.
+There are 18 verification suites. The core server suite executes real SQLite/FTS constraints and 71 synthetic HTTP requests. JOURNAL adds 47 requests for publication visibility, role checks, photo isolation, revisions, transactions, pagination and cleanup, plus frontend rendering checks. Prototype suites continue to run in local mode.
 
     node preview.cjs
 
 opens the local demo at http://127.0.0.1:4173. That command does not use production accounts or data. Production cloud mode is enabled by the Worker's runtime-config.js response.
 
 Live verification on 2026-11-10 confirmed private R2 upload, pending listing create/edit, duplicate-request prevention, anonymous access denial and synthetic account closure. A small sample of 50 public queries at concurrency 10 had no errors: median 593 ms, p95 2661 ms from the development machine against an empty public dataset. These numbers do not measure Mongolian user latency or national-scale capacity.
+
+## JOURNAL publishing
+
+Open [ADMIN → Өрөө JOURNAL](https://oroo.gantuutour.workers.dev/#/admin/journal) as a platform administrator. Create a title, summary, category, author, cover photo and ordered text, heading, quote or image blocks. Save a draft and inspect its private preview, then publish when ready. Only published articles are public. The latest three published articles with the home checkbox enabled appear on the home page and link to their news-style detail pages; all published articles appear in JOURNAL. Archiving or reverting to draft hides an article without deleting its content. There are no fabricated production articles.
+
+Article content and revisions live in D1, images in private R2. Publication, edits and archiving are recorded in the audit log. Apply `migrations/0002_journal.sql` before deploying the JOURNAL API.
 
 ## Deployment and operations
 
