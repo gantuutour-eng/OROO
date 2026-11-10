@@ -8,6 +8,14 @@ GitHub 저장소: [gantuutour-eng/OROO](https://github.com/gantuutour-eng/OROO).
 
 모바일은 같은 `index.html`에서 화면 너비 760px 이하일 때 앱 형태로 전환됩니다. PC에서 휴대폰 화면을 바로 확인하려면 `dist/mobile.html`을 여세요. 이 파일은 같은 앱을 390px 프레임에 표시하는 미리보기이며 별도 데이터나 별도 앱 구현을 사용하지 않습니다.
 
+## Cloudflare 자동 배포
+
+- GitHub: `gantuutour-eng/OROO`, 운영 브랜치 `main`.
+- Cloudflare Workers 프로젝트 이름: `oroo`. `wrangler.jsonc`의 `assets.directory`는 `./dist`이며 실행 HTML/CSS/JS와 로고만 웹 자산으로 배포합니다. 루트의 개발 스크립트·README·QA 캡처는 웹 자산에 포함하지 않습니다.
+- 루트 경로 `/`, 빌드 명령 `node verify-all.cjs`, 배포 명령 `npx wrangler deploy`. 검증 스크립트가 실패하면 배포 단계로 진행하지 않습니다. 로컬에서도 `node verify-all.cjs`로 전체 검증을 실행할 수 있습니다.
+- 연결 후 `main`의 새 커밋은 Cloudflare Workers Builds가 자동으로 검증하고 배포합니다. 실제 연결·빌드·배포 이력은 Cloudflare의 OR​​OO 프로젝트 화면에서 확인합니다.
+- 현재 배포 대상은 `localStorage` 기반 웹 프로토타입입니다. Cloudflare에 배포하는 것만으로 사용자 인증·서버 권한 검사·D1/R2 연결·DAN 인증·결제 기능이 생기지 않습니다. 회원/사업장별 인증과 권한을 먼저 구현하고, 매물·문의·심사 데이터는 서버 DB로, 사진은 보호된 업로드 API를 통한 오브젝트 스토리지로 이전해야 합니다.
+
 ## Өрөө ADMIN 최고 관리자
 
 `dist/admin.html` 또는 `http://127.0.0.1:4173/#/admin`에서 엽니다. PRO → 사업자 설정의 플랫폼 관리 데모 링크로도 접근할 수 있습니다. 소비자 사이트·PRO·ADMIN은 동일 출처의 같은 저장 데이터를 사용합니다. 기존에 열어 둔 앱은 새로고침해야 새 기능이 로드됩니다.
