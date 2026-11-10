@@ -1,0 +1,24 @@
+const fs=require('node:fs');
+function replaceFunction(source,name,next){const start=source.indexOf('function '+name+'(');if(start<0)throw new Error(name+' missing');const end=source.indexOf('\n',start);return source.slice(0,start)+next+source.slice(end)}
+let flows=fs.readFileSync('dist/flows.js','utf8');
+const wizardStart=flows.indexOf('function listingWizard()'),wizardEnd=flows.indexOf('function advanceListing(',wizardStart);flows=flows.slice(0,wizardStart)+'function listingWizard(){return renderListingEditor()}\n'+flows.slice(wizardEnd);
+flows=replaceFunction(flows,'advanceListing','function advanceListing(event){submitListingEditor(event)}');
+const photoStart=flows.indexOf('async function readListingPhotos('),photoEnd=flows.indexOf('\n',photoStart);flows=flows.slice(0,photoStart)+'async function readListingPhotos(input){await readEditorPhotos(input)}'+flows.slice(photoEnd);
+flows=flows.replace("return typeof data==='string'&&/^data:image\\/(jpeg|png);base64,[a-zA-Z0-9+/=]+$/.test(data)?data:img(((h?.id||0)+index)%8,1100)","return typeof data==='string'&&/^data:image\\/(jpeg|png);base64,[a-zA-Z0-9+/=]+$/.test(data)?data:h?.local?'assets/listing-placeholder.svg':img(((h?.id||0)+index)%8,1100)");
+flows=flows.replace('areas.includes(h.area)',"typeof h.area==='string'&&(areas.includes(h.area)||h.schemaVersion===2&&MONGOLIA_PROVINCES.includes(h.province))");
+flows=flows.replace('<button onclick="removeLocalListing(${h.id})">','<button class="edit-listing-button" onclick="editLocalListing(${h.id})">${icon(\'file-text\')} Зар засах</button><button onclick="removeLocalListing(${h.id})">');
+flows=flows.replace("h.photos?.[0]||img(id%8)","imageFor(h)");
+flows=flows.replace('${localNotice()}<form onsubmit="submitPropertyRequest',"${listingContactRows(h)}${localNotice()}<form onsubmit=\"submitPropertyRequest");
+flows=flows.replace("const count=h.photos?.length||4;","const count=h.photos?.length||(h.local?1:4);");
+fs.writeFileSync('dist/flows.js',flows);
+let app=fs.readFileSync('dist/app.js','utf8');const start=app.indexOf('const detailMarkup=`'),end=app.indexOf(';document.querySelector(\'.detail-column\')',start);if(start<0||end<0)throw new Error('Detail markup missing');app=app.slice(0,start)+'const detailMarkup=listingDetailMarkup(h)'+app.slice(end);
+app=app.replace('${h.floor} давхар · ${h.size} м² · СӨХ <span class="money-amount">${formatMnt(h.feeMnt??100000)}</span>','${listingFloorText(h)} · ${h.size} м² · СӨХ <span class="money-amount">${listingFeeText(h)}</span>');
+fs.writeFileSync('dist/app.js',app);
+let filters=fs.readFileSync('dist/mongolia-filters.js','utf8');filters=filters.replace("h.feeMnt=h.feeMnt??100000;","if(!h.local){h.feeMnt=h.feeMnt??100000;h.balcony=h.balcony??h.id%2===0;h.furnished=h.furnished??h.id%3!==1;}");
+filters=filters.replace("(!f.balcony||h.id%2===0)","(!f.balcony||h.balcony)").replace("(!f.furnished||h.id%3!==1)","(!f.furnished||h.furnished)");
+filters=filters.replace("(h.price===null?'':' / сар')","(h.price===null?'':' '+listingPeriodSuffix(h))").replace("' <span class=\"price-period\">/ сар</span>'","' <span class=\"price-period\">'+listingPeriodSuffix(h)+'</span>'");
+fs.writeFileSync('dist/mongolia-filters.js',filters);
+let editor=fs.readFileSync('dist/listing-editor.js','utf8');editor=editor.replace("optionText('period',h.rentPeriod||'month')+'ын түрээс'","listingRentLabel(h)");fs.writeFileSync('dist/listing-editor.js',editor);
+let html=fs.readFileSync('dist/index.html','utf8');html=html.replace('<script src="app.js">','<script src="listing-editor.js"></script><script src="app.js">').replace('</head>','<link rel="stylesheet" href="listing-editor.css"></head>');fs.writeFileSync('dist/index.html',html);
+let verify=fs.readFileSync('verify.cjs','utf8');verify=verify.replace('FormData};','FormData,URL};').replace("vm.runInContext(fs.readFileSync('dist/app.js'","vm.runInContext(fs.readFileSync('dist/listing-editor.js','utf8'),context);vm.runInContext(fs.readFileSync('dist/app.js'");fs.writeFileSync('verify.cjs',verify);
+console.log('Registration, preview, listing facts, filters and details connected to shared listing fields.');

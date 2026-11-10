@@ -1,0 +1,23 @@
+const fs=require('node:fs');
+function patch(path,from,to){let s=fs.readFileSync(path,'utf8');if(!s.includes(from))throw Error('Missing integration target: '+path+' / '+from.slice(0,65));s=s.replace(from,to);fs.writeFileSync(path,s)}
+patch('dist/index.html','href="pro.css">','href="pro.css"><link rel="stylesheet" href="admin.css">');
+patch('dist/index.html','<script src="pro.js"></script>','<script src="pro.js"></script><script src="admin.js"></script>');
+patch('dist/app.js',"document.body.classList.toggle('pro-page',route==='pro');","document.body.classList.toggle('pro-page',route==='pro');document.body.classList.toggle('admin-page',route==='admin');");
+patch('dist/app.js',"document.title=route==='pro'?","document.title=route==='admin'?adminTitle(r[1])+' · Өрөө ADMIN':route==='pro'?");
+patch('dist/app.js',"${!h.local&&h.id%3===0?", "${adminPromotionBadge(h)}${!h.local&&h.id%3===0?");
+patch('dist/app.js','</section>${mobileHomeExtras()}<section','</section>${mobileHomeExtras()}${adminPromotedSection()}<section');
+patch('dist/flows.js',"if(route==='pro')return proPage(sub||'dashboard');","if(route==='admin')return adminPage(sub||'overview');if(route==='pro')return proPage(sub||'dashboard');if(route==='notice')return adminPublicNotices(sub);");
+patch('dist/flows.js',"flowState.posts.map(item=>", "flowState.posts.filter(item=>item.adminStatus!=='hidden').map(item=>");
+patch('dist/flows.js','<p>${esc(item.body)}</p>${item.propertyId?', '<p>${esc(item.body)}</p>${adminHistoryReply(item)}${item.propertyId?');
+patch('dist/flows.js','flowState.pro={};listingPhotoDraft=[];', 'flowState.pro={};flowState.admin={};listingPhotoDraft=[];');
+patch('dist/listing-editor.js','h=buildListingRecord(d,id);delete h.editId;', 'h=adminPrepareListing(buildListingRecord(d,id));delete h.editId;');
+patch('dist/pro.js',"return !!h&&(!h.local||!h.listingStatus||h.listingStatus==='published')", "return !!h&&adminCanPublish(h)&&(!h.local||!h.listingStatus||h.listingStatus==='published')");
+patch('dist/pro.js',"if(at>=0)p[kind][at]=record;else p[kind].unshift(record);", "if(kind==='campaigns')adminCampaignSaved(record,old);if(at>=0)p[kind][at]=record;else p[kind].unshift(record);");
+patch('dist/pro.js',"${proStatusBadge(h.listingStatus||'published')}</td><td>${proDate", "${proStatusBadge(h.listingStatus||'published')}${adminProListingStatus(h)}</td><td>${proDate");
+patch('dist/pro.js','${body}${item.note?',"${body}${kind==='campaigns'?adminProCampaignStatus(item):''}${item.note?");
+patch('dist/pro.js',"flowState.pro=incoming.pro||{};flowState.draft", "flowState.pro=incoming.pro||{};flowState.admin=incoming.admin||{};flowState.draft");
+patch('dist/pro.js','</p></section>`}\nfunction proSaveOffice', '</p><a class="pro-admin-demo-link" href="#/admin">'+"${icon('shield')}"+'Платформын удирдлагын демо '+"${icon('arrow-up-right')}"+'</a></section>`}\nfunction proSaveOffice');
+patch('dist/icons.js',"const ICON_PATHS={", "const ICON_PATHS={\n flag:'<path d=\"M5 22V3m0 0c5-4 9 4 15 0v11c-6 4-10-4-15 0\"/>',");
+patch('verify.cjs',"vm.runInContext(fs.readFileSync('dist/pro.js','utf8'),context);", "vm.runInContext(fs.readFileSync('dist/pro.js','utf8'),context);vm.runInContext(fs.readFileSync('dist/admin.js','utf8'),context);");
+patch('verify-listing-editor.cjs',"'mobile-app','pro','app'", "'mobile-app','pro','admin','app'");
+console.log('Connected admin routes, moderation, campaign workflow, consumer promotions/replies/notices, PRO feedback, storage sync and shared verification loaders.');

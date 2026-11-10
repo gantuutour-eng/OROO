@@ -1,0 +1,26 @@
+# Local agent and editor state
+.openai/
+.codex/
+.agents/
+.vscode/
+.idea/
+
+# Credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+
+# Generated dependencies, caches and local archives
+node_modules/
+.cache/
+coverage/
+*.log
+*.zip
+.publish-*
+.DS_Store
+Thumbs.db

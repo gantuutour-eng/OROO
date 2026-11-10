@@ -1,0 +1,11 @@
+const fs=require('node:fs');
+const file='dist/app.js';let app=fs.readFileSync(file,'utf8');const previous='Таны дараагийн гэр энд бий.';if(!app.includes(previous))throw new Error('Hero source text missing');app=app.replace(previous,'Таны дараагийн орон зай энд байна');fs.writeFileSync(file,app);
+let readme=fs.readFileSync('README.md','utf8');
+readme=readme.replace('- Pretendard와 코럴 레드 테마, 몽골어 메뉴, 기존 반응형 레이아웃 유지.','- Pretendard와 코럴 레드 테마, 몽골어 메뉴. 메인 제목은 `Таны дараагийн орон зай энд байна`이며 모든 화면 크기에 공통으로 적용합니다.\n- 로컬 SVG 아이콘: 종류별 사이드 메뉴, 검색, 필터, 정렬, 상세 정보, 전화/채팅/공유/찜, 지도 도구와 상단 메뉴. 굵기·크기·포커스 상태를 통일했습니다.');
+readme=readme.replace('- 실제 목록·지도 마커에 적용되는 보증금·월세·면적 범위, 준공연도, 층수, 관리비 포함, 주차·엘리베이터·반려동물·발코니·가구 필터.','- 실제 목록·지도 마커에 적용되는 ₮ 가격/보증금·면적·층수의 최소/최대 범위, 준공연도, 관리비 포함, 차고(전체/있음/없음), 방 수(1~5+, 공동 거주), 주차·엘리베이터·반려동물·발코니·가구 필터.\n- 21개 아이막과 울란바토르, 울란바토르의 9개 구와 호로 선택을 지원하는 3단계 중복 선택 메뉴. 상위 지역 포함/하위 지역 제외, 지역명 검색, 조건 초기화.\n- 날짜순·높은 가격순·낮은 가격순·넓은 면적순 정렬. 방 수 옆 숫자는 다른 필터에 맞는 실제 데모 매물 수로 계산합니다.\n- 매물 카드·상세·관리비·보증금·단지 그래프·신규 프로젝트·추천 예산·매물 등록과 저장 가격을 투그릭(₮, MNT)으로 통일.');
+readme=readme.replace('기존 가격 예시는 10,000원 단위를 유지했으며 몽골 시장가격이나 환산값이 아닙니다.','가격은 투그릭으로 새로 설정한 예시이며, 몽골 시장가격이나 원화 환산값이 아닙니다. 이전 통화 단위의 저장된 가격은 임의 환산하지 않고 “가격 협의”로 표시하며, 이전 가격 검색 범위는 초기화합니다. 위치 선택 목록은 UI용 설정 데이터이며 예시 매물은 울란바토르에만 있습니다.');
+readme=readme.replace('- `node --check dist/flows.js`','- `node --check dist/flows.js`\n- `node --check dist/icons.js`\n- `node --check dist/mongolia-filters.js`\n- `node verify-mongolia-filters.cjs` — 지역 계층과 하위 제외, 복합 조건, ₮ 단위/범위, 차고/방 수, 정렬, 이전 검색 조건 이전, 저장 복원');
+readme=readme.replace('최종 확인 화면은 `qa/my-account.jpg`에 있습니다.','추가 브라우저 검증에서 지역·방 수·차고·가격의 복합 적용과 지도 마커 수, 정렬, 개선된 상세 아이콘·찜·문의 버튼, 투그릭 등록/미리보기/저장/새로고침을 확인했고 테스트 매물은 삭제했습니다. 확인 화면은 `qa/icons-and-mnt.jpg`, `qa/mnt-detail-prices.jpg`, `qa/mnt-price-filter.jpg`, `qa/mongolia-location.jpg`에 있습니다.');
+readme+='\n아이콘/필터 CSS는 기존 760px 모바일 기준을 따릅니다. 지역 선택창은 850px, 방 수 선택창은 680px을 최대 폭으로 사용하며 좁은 화면에서는 가용 폭에 맞춥니다. 가격 숫자와 ₮ 기호는 같은 줄에 유지합니다.\n';
+fs.writeFileSync('README.md',readme);
+console.log('Hero copy and delivery documentation updated.');

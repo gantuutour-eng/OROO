@@ -1,0 +1,32 @@
+const fs=require('node:fs');
+function patch(path,from,to){let s=fs.readFileSync(path,'utf8');if(!s.includes(from))throw Error('Missing integration: '+path+' '+from.slice(0,70));fs.writeFileSync(path,s.replace(from,to))}
+function fn(path,name,line){const lines=fs.readFileSync(path,'utf8').split('\n'),i=lines.findIndex(l=>l.startsWith('function '+name+'('));if(i<0)throw Error(name);lines[i]=line;fs.writeFileSync(path,lines.join('\n'))}
+patch('dist/index.html','href="broker-verification.css">','href="broker-verification.css"><link rel="stylesheet" href="office-profile.css">');
+patch('dist/index.html','<script src="broker-verification.js"></script>','<script src="broker-verification.js"></script><script src="office-profile.js"></script>');
+patch('dist/index.html','<a href="#/agent">Агентын үйлчилгээ</a>','<a href="#/agent">Агентын үйлчилгээ</a><a href="#/offices">Зуучлалын байгууллагууд</a>');
+patch('dist/flows.js',"if(route==='admin')return adminPage", "if(route==='offices')return officePage(sub);if(route==='admin')return adminPage");
+patch('dist/app.js','function render(){destroyPropertyMap();','function render(){destroyPropertyMap();destroyOfficeMap();');
+patch('dist/app.js',"if(route==='map')initializePropertyMap();", "if(route==='map')initializePropertyMap();if(route==='offices')mountOfficePage(r[1]);");
+patch('dist/app.js',"document.title=route==='admin'?", "document.title=route==='offices'?(officePublicModel(r[1])?.name||'Зуучлалын байгууллагууд')+' · Өрөө':route==='admin'?");
+patch('dist/listing-editor.js',"const other=homes.filter(item=>item.id!==id&&(h.local?item.local&&h.contactName&&item.contactName===h.contactName:!item.local&&item.area===h.area)).slice(0,2);", "const other=officeRelatedHomes(h).slice(0,2);");
+patch('dist/listing-editor.js',"${head('agent','Зар оруулагчийн мэдээлэл')}${listingContactRows(h)}<p class=\"muted\">Зар оруулагчийн оруулсан мэдээлэл. Баталгаажуулалт хийгдээгүй.</p>", "${head('agent',officeIdentity(h)?'Зуучлалын байгууллага':'Зар оруулагчийн мэдээлэл')}${officeListingCard(h)}");
+patch('dist/listing-editor.js',"${head('other',h.local?'Зар оруулагчийн бусад зар':'Тухайн дүүргийн бусад жишээ зар')}", "${head('other',officeIdentity(h)?'Байгууллагын бусад зар':'Зар оруулагчийн бусад зар')}");
+patch('dist/listing-editor.js',"${!other.length?'<p class=\"muted\">Бусад зар байхгүй.</p>':''}<button class=\"detail-report-button\"", "${!other.length?'<p class=\"muted\">Бусад зар байхгүй.</p>':''}${officeRelatedLink(h)}<button class=\"detail-report-button\"");
+patch('dist/pro.js',"tab==='settings'?proSettings():renderListingEditor()", "tab==='office'?proOfficePage():tab==='settings'?proSettings():renderListingEditor()");
+patch('dist/pro.js',"return flowState.requests.filter(r=>ids.has(r.propertyId)&&['message','phone'].includes(r.kind))", "return flowState.requests.filter(r=>(ids.has(r.propertyId)||r.officeId==='broker-local')&&['message','phone'].includes(r.kind))");
+patch('dist/pro.js','esc(proListingName(r.propertyId))','esc(officeInquiryTitle(r))');
+patch('dist/pro.js','${esc(r.date)} · № ${r.propertyId}',"${esc(r.date)} · ${r.propertyId?'№ '+r.propertyId:'Байгууллагын лавлагаа'}");
+patch('dist/pro.js','listingId:String(r.propertyId)',"listingId:r.propertyId?String(r.propertyId):''");
+patch('dist/pro.js','</form></section>${brokerProPanel()}','</form><a class="pro-admin-demo-link" href="#/pro/office">'+"${icon('briefcase')}"+'Нийтийн профайлын мэдээлэл засах '+"${icon('arrow-up-right')}"+'</a></section>${brokerProPanel()}');
+patch('dist/admin.js',"return h}\nfunction adminCampaignSaved", "return officeBindListing(h)}\nfunction adminCampaignSaved");
+fn('dist/admin.js','adminBrokers','function adminBrokers(){return brokerAdminPage()+officeAdminPanel()}');
+patch('dist/mobile-app.js',"const selected=route==='room'?'map'", "const selected=['room','offices'].includes(route)?'map'");
+patch('dist/mobile-app.js',"agent:'Агентын үйлчилгээ'}", "agent:'Агентын үйлчилгээ',offices:'Зуучлалын байгууллага'}");
+patch('dist/mobile-app.js',"if(route==='room'){location.hash=", "if(route==='offices'){location.hash=officeReturnListing?'#/room/'+officeReturnListing:'#/map';return}if(route==='room'){location.hash=");
+patch('dist/mobile-app.js',"['agent','briefcase','Агентын үйлчилгээ']", "['offices','briefcase','Зуучлалын байгууллагууд'],['agent','briefcase','Агентын үйлчилгээ']");
+patch('dist/flows.js',"function connectedContact(id,kind='message'){const h=homes.find(h=>h.id===id);", "function connectedContact(id,kind='message'){const h=homes.find(h=>h.id===id&&isPublicListing(h));");
+fn('dist/flows.js','submitPropertyRequest',"function submitPropertyRequest(event,id,kind){event.preventDefault();const h=homes.find(h=>h.id===id&&isPublicListing(h));if(!h||!['message','phone'].includes(kind))return;const identity=officeIdentity(h),body=String(new FormData(event.target).get('body')||'').trim();if(!body||body.length>1000)return;flowState.requests.unshift({id:flowId(),kind,propertyId:id,officeId:identity?.officeId,agentId:identity?.agentId,title:'Зар № '+id,body,date:flowDate(),status:'Орон нутгийн демо'});if(persistFlows()){closeOverlay();toast('Хадгаллаа · Миний булангаас үзэх боломжтой')}else flowState.requests.shift()}");
+patch('dist/flows.js',"${adminHistoryReply(item)}${item.propertyId?", "${adminHistoryReply(item)}${item.officeId&&officePublicModel(item.officeId)?'<a href=\"#/offices/'+esc(item.officeId)+'\">Байгууллагын профайл →</a>':''}${item.propertyId?");
+patch('verify.cjs',"vm.runInContext(fs.readFileSync('dist/broker-verification.js','utf8'),context);", "vm.runInContext(fs.readFileSync('dist/broker-verification.js','utf8'),context);vm.runInContext(fs.readFileSync('dist/office-profile.js','utf8'),context);");
+patch('verify-listing-editor.cjs',"'admin','broker-verification','app'", "'admin','broker-verification','office-profile','app'");
+console.log('Connected public office routes, listing cards and related inventory, PRO profile editor, admin profile review, enquiry routing, stable listing/agent IDs, mobile navigation and map lifecycle.');
