@@ -11,7 +11,7 @@ export async function authRoute(request,env,path,requestId){
   const created=await createSession(env,user.id);return json({user:publicUser(user),csrf:created.csrf},200,{'set-cookie':sessionCookie(created.token)});
  }
  if(path==='/api/auth/close'&&request.method==='POST'){
-  const user=await mutation(env,request);if(user.role!=='user')fail(409,'protected_account');await env.DB.batch([stmt(env,"UPDATE users SET status='closed',updated_at=? WHERE id=? AND role='user'",now(),user.id),stmt(env,"UPDATE listings SET state='hidden',revision=revision+1,updated_at=? WHERE owner_id=?",now(),user.id),stmt(env,'DELETE FROM sessions WHERE user_id=?',user.id),bumpPublic(env)]);return json({ok:true},200,{'set-cookie':sessionCookie('',0)});
+  const user=await mutation(env,request);if(user.role!=='user')fail(409,'protected_account');await env.DB.batch([stmt(env,"UPDATE users SET status='closed',updated_at=? WHERE id=? AND role='user'",now(),user.id),stmt(env,"UPDATE listings SET state='hidden',revision=revision+1,updated_at=? WHERE owner_id=? AND state<>'deleted'",now(),user.id),stmt(env,'DELETE FROM sessions WHERE user_id=?',user.id),bumpPublic(env)]);return json({ok:true},200,{'set-cookie':sessionCookie('',0)});
  }
  if(!['/api/auth/register','/api/auth/login','/api/auth/activate-admin'].includes(path)||request.method!=='POST')return null;
  originGuard(request);const body=await readJson(request,8192);
