@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const {DatabaseSync}=require('node:sqlite');
 const {randomUUID}=require('node:crypto');
 function database(){
- const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync('migrations/0001_core.sql','utf8'));
+ const db=new DatabaseSync(':memory:');for(const migration of fs.readdirSync('migrations').filter(n=>n.endsWith('.sql')).sort())db.exec(fs.readFileSync('migrations/'+migration,'utf8'));
  const wrap=(sql,args=[])=>({bind(...values){return wrap(sql,values)},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args),success:true}},async run(){const q=db.prepare(sql);if(q.columns().length)return {results:q.all(...args),success:true};return {results:[],meta:q.run(...args),success:true}},sql,args});
  return {db,prepare:wrap,async batch(statements){db.exec('BEGIN');try{const out=[];for(const q of statements)out.push(await q.run());db.exec('COMMIT');return out}catch(e){db.exec('ROLLBACK');throw e}}};
 }
@@ -74,4 +74,5 @@ async function main(){
  const plan=DB.db.prepare("EXPLAIN QUERY PLAN SELECT * FROM listings WHERE moderation='approved' AND state='published' ORDER BY created_at DESC,id DESC LIMIT 31").all();assert.ok(plan.some(r=>/INDEX/.test(r.detail)));
  console.log('Server: '+count+' requests passed; real SQLite/FTS, account isolation, CSRF, streaming media, idempotency, review gates and one-use activation.');DB.db.close();
 }
-main().catch(e=>{console.error(e);process.exitCode=1});
+module.exports={database};
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1});
