@@ -1,225 +1,36 @@
-# Өрөө — server-backed release
+# Өрөө — Mongolian real-estate platform
 
-The Cloudflare deployment uses real session authentication, D1 and private R2. See [CLOUD-OPERATIONS.md](CLOUD-OPERATIONS.md) for the architecture, data flow, deployment and launch limitations.
+[Consumer site](https://oroo.gantuutour.workers.dev/) · [PRO](https://oroo.gantuutour.workers.dev/#/pro) · [ADMIN](https://oroo.gantuutour.workers.dev/#/admin)
 
-Run `node verify-all.cjs` with Node 24. The local `node preview.cjs` command remains a separate demonstration mode and does not connect production data.
+The Cloudflare deployment uses real server sessions, D1 and a private R2 bucket. The local prototype remains a separate demo mode. This is an initial backend release, not a completed nationwide commercial launch.
 
-The following prototype documentation describes the local demonstration, not production authentication or storage.
+## Connected paths
 
----
+- Email/password registration and login, profile updates, password changes, logout and account closure. Public registration cannot assign staff roles. The initial administrator sets their own password through a reserved, expiring, one-use activation flow. Activation secrets and administrator identity are excluded from this repository.
+- User/organization-scoped listing registration, photos, revisions, archived records and review status. Every new or edited listing enters review; agent listings also require a verified organization before public display.
+- Browser-generated full JPEG and thumbnail variants stream through an authenticated API into private R2. D1 stores metadata and order. Photos do not enter database rows or localStorage as base64 in cloud mode.
+- Consumer map bounds/search/filters, separate map clusters, keyset pages, favorites, listing inquiries, reports, support, public office profiles and office inventories.
+- PRO organization submissions and private work records; ADMIN listing review, independent two-person organization review, moderation queues, staff role assignment with password re-entry, account status and append-only audit records.
+- Region summaries use published asking prices and actual sample counts. They are not transaction-price reports. Public data starts empty; prototype fixtures are not copied to production.
 
-# Өрөө — 몽골어 부동산 데모
+## Development and verification
 
-GitHub 저장소: [gantuutour-eng/OROO](https://github.com/gantuutour-eng/OROO). `dist`에 실행 코드와 로고, `qa`에 화면 검증 자료, 루트에 미리보기 서버와 검증 스크립트가 있습니다. `.openai` 등 로컬 도구 설정과 자격정보는 업로드에서 제외합니다. 루트의 `connect-*`, `update-*`, `finish-*` 등은 이전 개발 단계에서 사용한 일회성 변경 스크립트이며 실행에 필요하지 않습니다. 현재 화면을 실행하려면 아래의 `preview.cjs`만 사용하세요.
+Use Node 24.12.0 (see .nvmrc). Run:
 
-## 실행
+    node verify-all.cjs
 
-`dist/index.html`을 브라우저로 열면 사용할 수 있습니다. 또는 프로젝트 폴더에서 `node preview.cjs`를 실행하고 `http://127.0.0.1:4173`을 여세요. 웹폰트, 지도와 예시 사진은 인터넷 연결이 필요합니다.
+There are 16 verification suites. The server suite executes real SQLite/FTS constraints and 71 synthetic HTTP requests covering authorization, CSRF, photo isolation, transactions, retry idempotency, keyset pagination, two-reviewer approval, one-use activation and account closure. Prototype suites continue to run in local mode.
 
-모바일은 같은 `index.html`에서 화면 너비 760px 이하일 때 앱 형태로 전환됩니다. PC에서 휴대폰 화면을 바로 확인하려면 `dist/mobile.html`을 여세요. 이 파일은 같은 앱을 390px 프레임에 표시하는 미리보기이며 별도 데이터나 별도 앱 구현을 사용하지 않습니다.
+    node preview.cjs
 
-## Cloudflare 자동 배포
+opens the local demo at http://127.0.0.1:4173. That command does not use production accounts or data. Production cloud mode is enabled by the Worker's runtime-config.js response.
 
-- 공개 주소: [oroo.gantuutour.workers.dev](https://oroo.gantuutour.workers.dev/). 첫 배포에서 Cloudflare 빌드의 검증 14개와 웹 자산 35개 업로드가 통과했습니다.
-- GitHub: `gantuutour-eng/OROO`, 운영 브랜치 `main`.
-- Cloudflare Workers 프로젝트 이름: `oroo`. `wrangler.jsonc`의 `assets.directory`는 `./dist`이며 실행 HTML/CSS/JS와 로고만 웹 자산으로 배포합니다. 루트의 개발 스크립트·README·QA 캡처는 웹 자산에 포함하지 않습니다.
-- 루트 경로 `/`, 빌드 명령 `node verify-all.cjs`, 배포 명령 `npx wrangler deploy`. 검증 스크립트가 실패하면 배포 단계로 진행하지 않습니다. 로컬에서도 `node verify-all.cjs`로 전체 검증을 실행할 수 있습니다.
-- 연결 후 `main`의 새 커밋은 Cloudflare Workers Builds가 자동으로 검증하고 배포합니다. 실제 연결·빌드·배포 이력은 Cloudflare의 OR​​OO 프로젝트 화면에서 확인합니다.
-- 현재 배포 대상은 `localStorage` 기반 웹 프로토타입입니다. Cloudflare에 배포하는 것만으로 사용자 인증·서버 권한 검사·D1/R2 연결·DAN 인증·결제 기능이 생기지 않습니다. 회원/사업장별 인증과 권한을 먼저 구현하고, 매물·문의·심사 데이터는 서버 DB로, 사진은 보호된 업로드 API를 통한 오브젝트 스토리지로 이전해야 합니다.
-- 공개 주소는 로컬 미리보기와 다른 출처이므로 `127.0.0.1`에 저장한 작성 중 매물·PRO 정보·심사 기록을 자동으로 가져오지 않습니다.
+Live verification on 2026-11-10 confirmed private R2 upload, pending listing create/edit, duplicate-request prevention, anonymous access denial and synthetic account closure. A small sample of 50 public queries at concurrency 10 had no errors: median 593 ms, p95 2661 ms from the development machine against an empty public dataset. These numbers do not measure Mongolian user latency or national-scale capacity.
 
-## Өрөө ADMIN 최고 관리자
+## Deployment and operations
 
-`dist/admin.html` 또는 `http://127.0.0.1:4173/#/admin`에서 엽니다. PRO → 사업자 설정의 플랫폼 관리 데모 링크로도 접근할 수 있습니다. 소비자 사이트·PRO·ADMIN은 동일 출처의 같은 저장 데이터를 사용합니다. 기존에 열어 둔 앱은 새로고침해야 새 기능이 로드됩니다.
+GitHub main is connected to the oroo Cloudflare Worker. Workers Builds runs node verify-all.cjs before npx wrangler deploy. The Worker binds DB to oroo-main and MEDIA to oroo-media; the bucket stays private. The initial schema was applied to the dedicated D1 database. Subsequent schema changes require a reviewed migration before application deployment.
 
-- 대시보드: 전체/공개 매물, 심사 대기, 광고 요청, 미처리 신고·도움 요청, 처리 대기열, 상태 비율과 최근 관리자 작업. 실제 로컬 기록으로 계산합니다.
-- 매물 심사: 전체 매물 검색·상태 필터·페이지 이동·일괄 선택, 사진과 세부 정보 확인, 승인/대기/반려/중지 및 사유. 반려·중지에는 사유가 필요합니다. 관리자 중지는 PRO에서 공개 상태로 바꿔도 우회할 수 없습니다.
-- 중개사: 현재 브라우저의 PRO 사업자 정보와 연결 매물 수, 심사 상태와 사유. 사업자를 중지/반려하면 해당 PRO 매물이 소비자 화면에서 제외됩니다. 실제 자격·사업자 진위 검증은 수행하지 않습니다.
-- 회원: 현재 데모 세션과 명시적으로 추가한 예시 회원의 상태·메모. PRO의 개인 CRM 고객 명단을 회원 수로 집계하지 않습니다. 실제 계정 차단 기능은 서버 인증 연동 전까지 적용되지 않습니다.
-- 광고: PRO에서 요청으로 제출한 광고를 승인/보류/반려/중지. 기간·지역·연결 매물 공개 여부를 검증하며, 승인되고 기간이 시작된 광고 매물만 소비자 홈의 “Онцлох зарууд”와 카드 표시로 연결합니다. 숨긴 매물·중지된 사업자·만료 광고는 노출에서 제외합니다. 요청 수정 시 다시 승인받습니다. 결제·광고 비용 청구는 없으며 예산 합계를 매출로 표시하지 않습니다.
-- 신고·고객센터: 처리 상태·사용자에게 보이는 답변, 신고한 매물 중지. 사용자 마이페이지 내역에서 상태와 답변을 확인할 수 있습니다. 실제 SMS·이메일을 발송하지 않습니다.
-- 콘텐츠: 기존/신규 공지의 초안·게시·보관, 공지 상세 연결, 지역 커뮤니티의 로컬 게시글 숨김/재게시. 게시하지 않은 공지는 직접 주소로도 내용이 노출되지 않습니다.
-- 보고서·감사 기록: 지역별 공개 매물, 광고 요청 예산과 상태, 결정 시각·작업자·대상·이전/이후 값·사유, CSV 생성. 감사 기록은 편집 불가능한 서버 감사 로그가 아니라 브라우저 데모 기록입니다.
-- 설정: 모든 새/수정 매물 심사 또는 PRO만 심사하는 정책. 일반 소유주 매물의 기본은 즉시 게시이며 설정을 켜면 이후 저장하는 매물은 승인 전까지 비공개입니다. 중개사 매물은 항상 별도 승인과 중개사 심사를 요구합니다. 이미 저장한 매물에는 소급하지 않습니다.
-- 반응형: 760px 이하에서 드로어 메뉴와 심사 시트를 사용합니다. 1000px/1200px 기준으로 카드·패널을 재배치하고, 긴 표는 표 안에서 가로 스크롤합니다. 모바일 입력은 16px, 심사 버튼은 같은 줄과 47px 높이를 사용합니다.
+See [CLOUD-OPERATIONS.md](CLOUD-OPERATIONS.md) for upload limits, caching, session controls, cleanup, migrations, recovery planning and growth limits. Existing local browser demo data remains isolated and is not automatically uploaded.
 
-이 화면은 다방형 부동산 운영 업무를 참고해 별도로 설계했습니다. 다방 내부 비공개 최고 관리자 페이지를 열람하거나 복제한 결과는 아닙니다. 현재는 누구나 로컬 ADMIN 주소로 열 수 있는 데모로, 운영 배포에 필요한 실제 관리자 인증·MFA·서버 권한 검사·사업장 데이터 분리·DB·이미지 스토리지는 연결되지 않았습니다.
-
-“Жишээ ажлын урсгал” 버튼은 관리자 표시가 붙은 심사 대기 매물·광고·신고·문의·회원·공지 예시를 한 번 추가합니다. 설정에서 관리자 예시만 정리할 수 있고 기존 PRO 예시나 사용자 기록은 유지합니다.
-
-## Өрөө PRO 중개사 업무 공간
-
-`dist/pro.html` 또는 `http://127.0.0.1:4173/#/pro`에서 엽니다. 소비자 헤더의 **Өрөө PRO · Агент**와 모바일 내 메뉴에서도 연결됩니다. 같은 출처에서 일반 플랫폼과 동일한 매물 데이터를 사용합니다.
-
-- 대시보드: 공개 매물, 고객, 미처리 문의, 오늘 일정, 최근 7일 조회, 매물 상태, 최근 수정 목록. 실제 브라우저 기록으로 계산하며 서버 통계로 표시하지 않습니다.
-- 매물: 기존 4단계 등록·사진·설비·연락처 입력을 재사용하며 PRO에서 등록/수정하면 PRO로 돌아옵니다. 공개/숨김/거래 종료 상태가 소비자 목록·검색·추천·단지·모바일 상세에도 적용됩니다. 숨긴 매물은 PRO에서 확인할 수 있습니다.
-- 개인 매물 장부: 비공개 메모, 위치, 투그릭 가격, 연락 정보를 기록하고 전체 등록 폼으로 넘겨 사진과 세부 내용을 완성할 수 있습니다.
-- 고객·상담: 예산/희망 지역/진행 상태, 고객별 상담 기록. 자기 매물의 소비자 문의를 고객·상담으로 연결합니다. 고객과 연결된 기록이 있으면 먼저 관계를 변경하도록 안내합니다.
-- 일정: 울란바토르 날짜를 기준으로 월간 달력, 날짜별 업무, 방문·전화·납부 일정과 상태를 관리합니다.
-- 계약 업무 기록: 고객·매물·금액·보증금·기간·납부일·진행 상태와 인쇄용 기록. 법률 계약 양식이나 전자 서명 기능은 아닙니다.
-- 공동 중개: 그룹 계획, 참여자 이름과 연결 매물 기록. 실제 초대·타 사용자 공유 기능은 아직 없습니다.
-- 광고: 상품/지역/연결 매물/예산/기간을 담은 계획·요청 기록. ADMIN 승인을 거친 광고는 이 브라우저의 소비자 홈에 예시 노출되며 실제 결제는 발생하지 않습니다.
-- 보고서·CSV: 자기 매물의 로컬 조회/문의/찜, 고객·계약 수, UTF-8 CSV. 수식으로 해석될 수 있는 CSV 값은 보호하며 삭제된 매물의 조회는 현재 매물 보고서에서 제외합니다.
-- 사업자 정보: 신규 등록의 중개사 정보를 미리 채웁니다. 저장 용량 오류는 성공 처리하지 않습니다. 같은 출처의 다른 탭에서 매물 상태·문의가 갱신되며 작성 중인 등록 폼은 덮어쓰지 않습니다.
-
-공개된 [다방프로 업무관리 소개](https://pro.dabangapp.com/intro/agent-tool)의 업무 구성을 참고해 몽골어·Pretendard·코럴 색상으로 작성했습니다. 로그인 뒤의 실제 관리 화면을 그대로 복제했다고 주장하지 않습니다. 한국 네이버 매물 모니터링·국토부 실거래 연동은 구현 범위에 포함하지 않았습니다.
-
-현재 PRO도 localStorage 기반 데모입니다. 실제 운영에는 사용자 인증, 중개사/사업장별 접근 권한, 서버 DB·이미지 스토리지, 서버 통계와 알림 연동이 필요합니다. 예시 정보 추가 버튼은 “Жишээ” 표시의 고객 2명·상담·일정·장부만 추가하며 실제 매물을 임의로 게시하지 않습니다.
-
-## 사무소 공개 프로필과 매물 연결
-
-소비자 흐름은 **매물 상세의 사무소 카드 → 사무소 공개 프로필 → 해당 사무소의 공개 매물 목록 → 매물 상세**입니다. 사무소 이름·로고·전체 매물 버튼에서 같은 프로필로 연결되며, 모바일의 뒤로 가기는 열었던 매물로 돌아옵니다.
-
-- 예시 프로필: `http://127.0.0.1:4173/index.html#/offices/demo-central`. 사무소 목록은 `#/offices`이며 푸터와 모바일 내 메뉴에서도 연결됩니다. 가상의 사무소 2곳에 기존 예시 매물을 각각 12개씩 연결했습니다. 실사업자 인증이나 실제 중개사 평점으로 표시하지 않습니다.
-- 프로필: 사무소 로고·대표 사진·커버, 소개, 대표자, 공개 연락처, 사업자/중개업 정보, 영업시간, 주소와 사무소 위치 지도. 입력한 실제 사무소 좌표만 사용하며 좌표가 없으면 임의의 지도 지점을 만들지 않습니다.
-- 매물 목록: 사무소 ID로 연결한 공개 매물만 집계합니다. 이름 검색·유형·임대/매매·방 수·정렬과 8개 단위 페이지 이동을 지원합니다. 숨김·심사 대기·중지 매물은 개수와 관련 매물에서도 제외됩니다. PC 4열, 1100px 이하 2열, 기존 모바일 기준인 760px 이하 1열로 배치합니다.
-- PRO의 **Нийтийн профайл** (`#/pro/office`): 소개·영업시간·사무소 좌표와 로고/대표/커버 사진을 편집하고 검수를 신청합니다. JPEG/PNG 각 8MB 이하이며 브라우저에서 축소해 저장합니다. 전화·이메일 공개는 별도 선택입니다. 사업자 기본정보와 비공개 심사 자료는 이 폼에서 복제하지 않습니다.
-- ADMIN의 중개사 화면: 사업자 승인과 별도로 공개 프로필의 현재 버전을 검수합니다. 사업자 승인과 프로필 승인이 모두 유효해야 실제 PRO 사무소 프로필이 공개됩니다. 내용 변경·사업자 정지·승인 만료 시 이전 프로필 노출을 차단합니다. 심사 자료의 내부 참조·고객 CRM·내부 메모는 공개 모델에 포함하지 않습니다.
-- 문의: 사무소 일반 문의 또는 해당 사무소 매물을 선택한 문의를 사용자 내역에 저장합니다. 실제 PRO 사무소의 문의는 해당 PRO 상담으로 연결하며 다른 사무소 문의와 섞지 않습니다. 예시 사무소에는 가짜 전화번호를 만들지 않았습니다. 외부 메시지·전화 발신은 수행하지 않습니다.
-
-현재 저장소에는 실제 PRO 사무소가 한 곳만 있으며 `broker-local`로 식별합니다. 공개 프로필 심사도 기존 승인 절차와 마찬가지로 **브라우저 데모 상태**입니다. 운영 서비스에는 서버에서 사무소/담당자 ID, 권한, 공개 데이터 조회와 검수 버전을 검증해야 합니다. `file://`와 HTTP 미리보기는 출처가 달라 저장 데이터가 공유되지 않습니다.
-
-검증: `node verify-office-profile.cjs`로 ID 연결, 공개 데이터 분리, 매물 필터·정렬·페이지 이동, 문의 라우팅, 다른 사무소 매물 선택 차단, 사업자/프로필 승인과 수정·만료 시 차단, 저장 실패 복원 및 생성 이벤트 문법을 확인했습니다. 기존 PRO·ADMIN·등록·모바일·상세 탭·전체 흐름 검증도 통과했습니다. 실제 브라우저에서 PC/390px 모바일의 상세 카드→프로필→매물과 복귀, 매매 필터, 페이지 이동, 일반 문의 저장/내역, 사진 업로드와 재진입 유지, 미승인 신청 차단, 관리자 프로필 검수 창을 확인했습니다. 테스트로 만든 문의·프로필 입력은 정리했습니다. 승인 성공 경로는 합성 자료로 자동 검증했으며 실제 사무소를 임의로 승인하지 않았습니다. 화면: `qa/office-card.jpg`, `qa/office-profile.jpg`, `qa/office-card-mobile.jpg`, `qa/office-profile-mobile.jpg`, `qa/office-profile-editor.jpg`.
-
-## Манай хороолол — 지역 종합 페이지
-
-`#/community`를 지역 종합 페이지로 개편했습니다. 도시/아이막 → 울란바토르의 구 → 호로를 선택하면 공개 매물·가격 요약·게시글·공지·사무소 목록이 같은 지역 범위로 변경됩니다. 지역과 탭은 독립 주소로 열 수 있으며 관심 지역 저장과 마지막 선택을 같은 출처의 브라우저 저장소에 유지합니다. 울란바토르 외 아이막은 전체 단위 선택만 지원하며 솜/박 경계나 중심 좌표를 임의로 만들지 않습니다.
-
-- **종합:** 공개 매물 수, 임대·매매 건수, 지역 글 수, 매물 미리보기, 지도와 생활시설 분류, 최근 공지와 지역 글. 이전의 고정된 버스 6분·월세 150만₮·공원 3개 표시는 제거했습니다.
-- **매물:** 선택 지역 안의 공개 매물만 유형·임대/매매·방 수·검색·가격 정렬로 조회하고 9개씩 페이지를 이동합니다. 매물 상세 및 기존 매물 지도로 연결합니다. 지도에서 단일 지역을 선택한 뒤 동네 화면을 열면 해당 범위를 이어받습니다.
-- **가격:** 같은 주거 유형·방 수·계약 종류로 나눈 게시 호가의 중앙값과 표본 수를 표시합니다. 월 임대는 일/주 단위 가격과 협의 가격을 제외합니다. 데이터가 없으면 대시(—)로 표시하며 추세나 실거래 가격을 생성하지 않습니다. 기존 예시 매물이 계산에 포함됐다는 안내를 표시합니다.
-- **생활지도:** MapLibre + OpenFreeMap 지도를 사용합니다. 사용자 입력 좌표는 공개 매물의 위치로, 기존 예시 매물은 명시적으로 구의 일반 중심점에 묶어 표시합니다. 공식 행정 경계나 도보 시간 계산은 연결되지 않았습니다.
-- **주변 시설:** 사용자가 버튼을 누를 때만 OpenStreetMap의 Overpass API에서 선택한 일반 중심점 1km 이내 학교/유치원·의료·상점·카페·공원·버스 정류장을 조회합니다. 요청당 최대 80개, 12개씩 더 보기, 메모리 캐시와 15초 재요청 제한, 22초 클라이언트 제한을 사용합니다. 같은 범주의 중복 요청을 막고 지역 전환 시 이전 요청을 취소합니다. OSM 결과가 불완전하거나 실패하면 실제 0개로 처리하지 않고 실패 상태를 표시합니다. 거리는 직선거리이며 OSM 전체 시설의 완전성을 보장하지 않습니다.
-- **지역 공지:** 기존 ADMIN → 콘텐츠의 공지 작성/편집 폼에 지역과 출처명·URL을 추가했습니다. 선택 지역/상위 지역과 플랫폼 공통의 게시된 공지만 노출합니다. 초안·보관 공지는 제외하고 상세 화면에 출처를 연결합니다. 플랫폼 공지를 정부 공식 공지로 표시하지 않습니다.
-- **이웃 이야기:** 지역·분류·작성 표시·날짜와 함께 로컬 글을 저장하고, 지역별 조회·좋아요·관리자 숨김·내 글 내역으로 연결합니다. 예전의 지역 없는 글은 보존하고 별도의 이전 글 창에서만 확인합니다. 실제 주민/DAN 인증이나 다중 사용자 커뮤니티 서버는 연결되지 않았습니다.
-- **사무소:** 해당 지역에 공개 매물을 보유한 공개 사무소만 연결합니다. 기존 승인 배지·프로필 검수·승인 만료 조건을 유지하고 예시 사무소는 예시임을 표시합니다.
-
-공기질·실시간 버스·공식 지역 통계는 API 연동된 값처럼 표시하지 않고, [몽골 기상기관](https://tsag-agaar.gov.mn/environmental)·[울란바토르 교통기관](https://www.ubtransport.mn/)·[통계청](https://www.1212.mn/)의 출처 링크로 구분했습니다. 공공 서비스의 실제 API 사용 권한과 조건은 별도 확인이 필요합니다. 시설 조회는 [Overpass 공개 서버 운영 지침](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html)을 참고한 소규모 데모이며, 운영 규모의 공유 캐시·자체 수집 저장소·서비스 보장 구성은 별도 서버 작업입니다.
-
-배치는 1280px 컨테이너의 본문+정보 사이드바이며 1100px 이하에서는 매물 2열, 기존 모바일 기준 760px 이하에서는 한 열과 가로 탭으로 전환됩니다. 모바일 입력은 16px로 표시합니다. 브랜드 표기는 소개·푸터·브라우저 제목·저널·지도 앱 이름에서 **Өрөө платформ / ӨРӨӨ**로 정리했습니다. 소개 문구도 몽골 서비스와 현재 데모 범위에 맞게 변경했습니다.
-
-`node verify-neighborhood.cjs`로 지역 라우트/매칭, 공개 데이터만 집계, 방 수·유형별 MNT 중앙값, 월/일 임대 분리, 필터, 관심 지역과 저장 실패 복원, 지역 글·좋아요·관리자 숨김·기존 글 보존, 지역 CMS 공지·안전한 출처 URL, 지도 이동, 생성 이벤트 문법, OSM 응답 검증·거리·중복 제한·실패·이전 요청 취소를 검증합니다.
-
-브라우저에서는 1280px/2075px PC와 390px 모바일 화면에서 지역 변경(24→3→1), 관심 지역 저장·새로고침 복원, 매물 필터와 페이지 이동, 지역 글 저장·다른 지역 제외·내 글 내역, 실제 OSM 학교/유치원 조회와 더 보기, 외부 서비스 실패 안내, 모바일 상세 복귀, 공지 폼의 종속 지역 선택과 브랜드 소개 문구를 확인했습니다. 테스트 글·관심 지역은 정리했습니다. 지역 공지 게시/보관 분리는 자동 검증으로 확인했으며 브라우저에 테스트 공지를 발행하지 않았습니다. 전체 페이지 캡처 대신 실제 뷰포트 캡처를 사용했습니다. 화면: `qa/neighborhood-overview.jpg`, `qa/neighborhood-hero.jpg`, `qa/neighborhood-map.jpg`, `qa/neighborhood-mobile.jpg`, `qa/neighborhood-mobile-listings.jpg`, `qa/oroo-brand-about.jpg`.
-
-
-## 기존 구현
-
-- 모바일 웹: 하단 5개 탭(홈·관심·지도·신규 프로젝트·내 메뉴), 2+3개 분류 카드, 가로 추천 목록, 지도/목록 전환, 독립 주소를 갖는 전체 화면 상세와 뒤로 가기, 사진 갤러리, 고정 문의 버튼, 아래에서 열리는 필터, 도시→구→호로 단계별 지역 선택, 전용 검색·내 메뉴, 휴대폰용 4단계 등록/수정.
-- 모바일과 데스크톱은 같은 매물·사진·가격·검색 조건·찜·문의·임시 등록 데이터를 사용합니다. 신규 지역명 검색은 이전 지역 제한을 교체하며 금액 등 다른 필터는 유지합니다. 같은 기기·브라우저·출처 내에서 공유되는 데모 저장 방식입니다.
-- 사용자 지정 PNG 로고 `dist/assets/oroo.png`: 헤더와 로그인 화면에 적용. 원본 이미지를 그대로 사용합니다.
-- Pretendard와 코럴 레드 테마, 몽골어 메뉴. 메인 제목은 `Таны дараагийн орон зай энд байна`이며 모든 화면 크기에 공통으로 적용합니다.
-- 로컬 SVG 아이콘: 종류별 사이드 메뉴, 검색, 필터, 정렬, 상세 정보, 전화/채팅/공유/찜, 지도 도구와 상단 메뉴. 굵기·크기·포커스 상태를 통일했습니다.
-- 홈의 5개 분류를 지도 목록과 동일하게 연결: 오론수츠, 하우스, 오피스/서비스, 토지 임대, 단기 임대.
-- 검색 추천: 지역/단지/매물번호 탭, 최근 검색, 검색 조건 저장과 복원.
-- 실제 목록·지도 마커에 적용되는 ₮ 가격/보증금·면적·층수의 최소/최대 범위, 준공연도, 관리비 포함, 차고(전체/있음/없음), 방 수(1~5+, 공동 거주), 주차·엘리베이터·반려동물·발코니·가구 필터.
-- 21개 아이막과 울란바토르, 울란바토르의 9개 구와 호로 선택을 지원하는 3단계 중복 선택 메뉴. 상위 지역 포함/하위 지역 제외, 지역명 검색, 조건 초기화.
-- 날짜순·높은 가격순·낮은 가격순·넓은 면적순 정렬. 방 수 옆 숫자는 다른 필터에 맞는 실제 데모 매물 수로 계산합니다.
-- 매물 카드·상세·관리비·보증금·단지 그래프·신규 프로젝트·추천 예산·매물 등록과 저장 가격을 투그릭(₮, MNT)으로 통일.
-- OpenFreeMap + MapLibre로 울란바토르 지도, 몽골 전역 보기, 지역 마커, 확대·이동. MAPS.ME 앱으로 지역 열기.
-- 매물 목록/상세/지도 3열 화면, 사진 갤러리, 상세 항목 고정 탭과 전체 항목 펼침, 문의·신고·공유.
-- 관심 매물과 최근 본 매물 편집, 단지 상세·최근/관심 단지, 저장한 검색.
-- 마이페이지: 매물 문의, 전화 문의, 고객센터 문의, 신고, 작성 글, 내 매물, 닉네임 설정.
-- 데모 회원가입: 조건 확인 → 데모 코드(123456) → 정보 입력, 비밀번호 일치 검사, 비밀번호 보기, 재설정 안내, 데모 세션.
-- 직접 매물 등록: 위치·건물 정보 → 가격·계약 조건 → 설비·사진·설명 → 최종 확인의 4단계. 임시 저장·새로고침 복원·내 매물 수정·삭제를 지원합니다.
-- 상세 화면과 같은 데이터로 연결한 입력 항목: 도시/아이막·구/솜·호로/박·주소·좌표, 전용/전체 면적, 방/욕실 수, 해당/전체 층수, 준공연도·구조·방향·입주일, 투그릭 가격·보증금·일/주/월 임대, 관리비와 포함 항목, 주차·차고·엘리베이터·반려동물·흡연·가구 조건.
-- 난방·냉방, 가구/가전 20종, 보안시설 8종, 기타 시설 5종, 주변 교통/학교/편의시설, 영상/3D 링크, 소유주/중개사 연락 정보. 등록 → 미리보기 → 카드·상세·필터에서 같은 값을 사용하며 입력하지 않은 면적·층수·설비·교통·연락 정보는 임의로 채우지 않습니다. 호수 공개는 별도 선택입니다.
-- JPEG/PNG 최대 10장(개별 8MB), 브라우저 내 사진 축소, 대표 사진과 순서 변경·삭제. 브라우저 저장 용량이 부족하면 안내하고 저장 성공으로 처리하지 않습니다.
-- 필터 하단 초기화/결과 버튼을 한 줄과 같은 높이 44px로 정렬했습니다.
-- 고객센터의 FAQ 분류/검색, 공지 목록·페이지·상세·돌아가기, 문의 저장과 내역 조회.
-- 중개사 상품: 일반/패키지/프리미엄, 지역 선택, 기간·매물 수를 선택한 데모 문의.
-- 조건에 맞춘 추천 목록, 지역 게시글 로컬 저장, 매물번호 조회, 페이지 상단 이동.
-
-## 참고 화면
-
-UIBowl의 다방 웹 레퍼런스에서 공개된 주요 패턴을 확인해 기능을 연결했습니다. 전체 221개 스크린샷을 하나씩 재현한 결과는 아닙니다. 확인한 대표 화면:
-
-- 검색 메인: https://uibowl.io/website/다방?imgId=cm5m7cns10002mt0c2i9u9s4k
-- 이메일 로그인: https://uibowl.io/website/다방?imgId=cm5m8o118003jmt0cf5n346pa
-- 비밀번호 재설정: https://uibowl.io/website/다방?imgId=cm5m8o11j003lmt0cfyzl4v42
-- 아파트 필터: https://uibowl.io/website/다방?imgId=cm5m8o23p00afmt0co7k7kcw7
-- 마이페이지: https://uibowl.io/website/다방?imgId=cm5m8o1400041mt0cgphgzvlp
-- 매물 등록: https://uibowl.io/website/다방?imgId=cm5m8o1t9008jmt0cv2zks27l
-- 고객센터: https://uibowl.io/website/다방?imgId=cm5m7fpqv0016mk0cwl5c0es8
-- 모바일 앱 홈: https://uibowl.io/name/다방?imgId=cm4lh2t63000el40cf3cqv7ay&detail=1
-- 모바일 지도: https://uibowl.io/name/다방?imgId=cm4lgv8xa000kl40cwpfi1prs&detail=1
-
-모바일 레퍼런스에서는 홈, 지도, 상세·단지/프로젝트와 필터의 대표 화면을 확인했습니다. 앱 전체 219개 패턴을 모두 재현하거나 iOS/Android 설치 앱을 빌드한 결과는 아닙니다.
-
-## 데이터와 연동 범위
-
-실매물 DB, 실제 사용자 인증/OAuth, SMS·이메일 발송, 결제, 실제 거래가격, 3D 투어와 Car 서비스는 연결되지 않았습니다. 외부 서비스 요청을 보내거나 결제가 완료된 것처럼 표시하지 않습니다. 데모 등록/문의/신고/게시글/관심목록은 localStorage에 저장하고, 비밀번호와 입력한 이메일은 저장하지 않습니다. 고객센터의 개인정보 화면에서 데모 데이터를 초기화할 수 있습니다.
-
-기본 매물과 지역 중심 좌표는 예시입니다. 신규 등록 매물은 지도에서 선택하거나 직접 입력한 좌표가 있어야 저장할 수 있고, 해당 지점으로 연결됩니다. 기존 예시 매물과 과거 좌표 없는 기록은 구의 일반 중심점임을 표시합니다. 몽골 행정구역 경계를 검증한 서비스는 아닙니다. 기본 가격은 투그릭으로 새로 설정한 예시이며, 몽골 시장가격이나 원화 환산값이 아닙니다. 이전 통화 단위의 저장된 가격은 임의 환산하지 않고 “가격 협의”로 표시하며, 이전 가격 검색 범위는 초기화합니다. 위치 선택 목록은 UI용 설정 데이터이며 기본 예시 매물은 울란바토르에만 있습니다. 기본 단지 가격 그래프는 모형 데이터이며 사용자 등록 매물에는 임의의 가격 추세를 만들지 않습니다.
-
-사진과 임시 입력 내용도 현재는 localStorage에 저장합니다. 브라우저/출처별로 별도이며 기기 간 공유나 실제 서비스용 이미지 저장소가 아닙니다. 다량의 사진과 공개 매물 운영에는 서버 DB 및 오브젝트 스토리지 연동이 필요합니다.
-
-## 검증
-
-- `node --check dist/app.js`
-- `node --check dist/flows.js`
-- `node --check dist/icons.js`
-- `node --check dist/mongolia-filters.js`
-- `node --check dist/listing-editor.js`
-- `node --check dist/mobile-app.js`
-- `node verify-mobile.cjs` — 5개 탭, 검색/내 메뉴, 모바일 상세 주소·뒤로 가기, 관련 매물의 복귀 경로, 위치→지도 연동, 지도/목록 전환, 신규 지역 검색의 이전 지역 조건 교체
-- `node verify-listing-editor.cjs` — 필수값·범위 검증, 전체 등록 정보의 미리보기/상세/목록/필터 연결, 비공개 호수, 안전한 텍스트/링크, 수정과 옵션 해제, 재실행 후 복원, 사진 순서·삭제, 미입력 정보와 단지 추세의 임의 생성 방지
-- `node verify-mongolia-filters.cjs` — 지역 계층과 하위 제외, 복합 조건, ₮ 단위/범위, 차고/방 수, 정렬, 이전 검색 조건 이전, 저장 복원
-- `node verify-flows.cjs` — 기본 검증 포함, 신규 라우트, 5개 분류, 필터 유효성, 저장한 검색, 문의/신고, 자격정보 미저장, 매물 등록/삭제/재로딩, 단지 찜
-- `node verify-map.cjs`
-- `node verify-mapsme.cjs`
-- `node verify-detail-navigation.cjs`
-
-로컬 미리보기의 실제 브라우저에서 검색 추천, 필터 결과, 몽골 지도, 상세 문의 저장과 마이페이지 조회, 등록 전 단계와 미리보기/저장, 새로고침 후 등록 유지/삭제, 저장한 검색 복원, 단지 찜, 공지 상세/복귀, 중개사 지역/상품 선택과 문의 내역을 확인했습니다. 신규 로고의 이미지 로딩도 확인했습니다. 추가 브라우저 검증에서 지역·방 수·차고·가격의 복합 적용과 지도 마커 수, 정렬, 개선된 상세 아이콘·찜·문의 버튼, 투그릭 등록/미리보기/저장/새로고침을 확인했고 테스트 매물은 삭제했습니다. 확인 화면은 `qa/icons-and-mnt.jpg`, `qa/mnt-detail-prices.jpg`, `qa/mnt-price-filter.jpg`, `qa/mongolia-location.jpg`에 있습니다. 화면 검증은 데스크톱 기본 뷰포트에서 수행했으며, MAPS.ME 설치 앱 실행은 검증하지 않았습니다.
-
-웹 화면은 위 Cloudflare 공개 주소로 배포했습니다. 실제 서비스용 인증·서버 DB·이미지 업로드 스토리지 연결은 아직 구현되지 않았습니다.
-아이콘/필터 CSS는 기존 760px 모바일 기준을 따릅니다. 지역 선택창은 850px, 방 수 선택창은 680px을 최대 폭으로 사용하며 좁은 화면에서는 가용 폭에 맞춥니다. 가격 숫자와 ₮ 기호는 같은 줄에 유지합니다.
-
-확장 등록 폼은 최대 1230px이며 기존 1000px/760px 기준에서 입력 열과 안내 패널을 재배치합니다. 데스크톱 브라우저에서 단계 이동, 종속 지역 선택, 옵션·금액 입력, 임시 저장·새로고침 복원, 필수 사진 누락 안내를 확인했습니다. 등록/수정/재실행 데이터 연결은 위 코드 검증을 통과했습니다. 필터 버튼의 상단 위치와 높이(44px) 일치를 실제 DOM과 화면으로 확인했습니다. 증거 화면: `qa/listing-editor-facilities.jpg`, `qa/filter-actions-aligned.jpg`.
-
-모바일 추가 검증에서는 내장 브라우저로 실제 사진 첨부·압축, 4단계 미리보기·최종 저장, 새로고침 후 사진/세부 정보 복원, 가격 수정(2,500,000→2,600,000₮), 문의 저장, 찜, 갤러리 전환, 상세 고정 탭, 지도와 상세 연결을 확인했습니다. 360/390/430px 화면과 1280px 데스크톱 화면을 점검했습니다. 좁은 지역 선택창의 버튼은 같은 줄과 같은 높이 47px이며, 단계별 목록은 14px 글자를 사용합니다. 폼의 주요 입력창은 16px 글자를 사용하고 하단 안전 영역을 확보합니다. 검증용으로 생성한 매물·찜·문의는 정리했습니다. 증거 화면: `qa/mobile-home.jpg`, `qa/mobile-detail.jpg`, `qa/mobile-price-filter.jpg`, `qa/mobile-location-360.jpg`, `qa/mobile-account.jpg`.
-
-PRO 검증: `node --check dist/pro.js`, `node verify-pro.cjs` 및 기존 전체 검증 스크립트를 실행했습니다. 실제 브라우저에서 고객·상담·일정·개인 장부·계약 업무 기록·공동 중개 계획·광고 계획 저장과 새로고침 복원, 개인 장부에서 사진을 포함한 4단계 매물 등록, 공개/숨김과 소비자 결과의 탭 간 갱신, 소비자 문의→상담 연결, 인쇄 미리보기를 확인했습니다. 390px 모바일 PRO의 메뉴·입력·버튼 정렬도 확인했습니다. CSV 내용 생성은 자동 검증을 통과했으나 내장 브라우저의 다운로드 완료 이벤트는 확인하지 못했습니다. 검증용 QA PRO 매물·문의·업무 기록을 정리하고 이름에 “Жишээ”가 붙은 예시 업무만 추가했습니다. 증거 화면: `qa/pro-dashboard.jpg`, `qa/pro-calendar.jpg`, `qa/pro-mobile-menu.jpg`.
-
-ADMIN 검증: `node verify-admin.cjs`로 11개 화면과 생성된 이벤트 문법, 일괄 선택과 표시 순서 일치, 심사 사유 검사, 공개/비공개 연결, 중개사 중지 우회 방지, 승인 전/기간 전/만료 광고 제외, 광고 재심사, 수정 매물의 버전별 심사, 신고 제재와 사용자 답변, 공지 게시/보관과 직접 주소 차단, 커뮤니티 숨김, 저장 실패 롤백, 관리자 예시만 정리하는 기능을 검증했습니다. 기존 PRO·등록·모바일·필터·지도·탭 검증도 통과했습니다. 실제 브라우저에서 예시 매물 승인→광고 승인→소비자 홈 노출, 광고 중지/재승인의 다른 탭 반영(0→1), PRO 관리자 결정 표시, 문의 답변→사용자 내역, 신고 처리, 공지 발행→상세와 새로고침 복원을 확인했습니다. 390px 모바일에서 메뉴·심사 창·가로 넘침·버튼 정렬을 확인했습니다. CSV 다운로드 파일 완료는 이번 브라우저 검증 범위에 포함하지 않았습니다. 기능 검증 후 관리자 예시를 정리하고 대기 상태 예시를 다시 추가해 두었습니다. `qa/admin-dashboard.jpg`, `qa/admin-mobile.jpg`, `qa/admin-mobile-review.jpg`에서 확인할 수 있습니다.
-
-## 강화된 중개사 승인 절차
-
-승인 중개사에게 코럴 체크 문양의 **Баталгаажсан зуучлагч** 배지를 표시합니다. 기존 두 단계 심사가 모두 유효한 경우에만 매물 카드·상세 사무소 카드·공개 사무소 프로필·PRO 업무 공간·ADMIN 중개사 카드에 나타납니다. 사무소 공개 프로필은 별도 콘텐츠 승인 조건도 유지합니다. 소유주 매물이나 가상의 예시 사무소에는 승인 배지를 부여하지 않습니다.
-
-배지 상태는 별도 저장하지 않고 `brokerEligible()`에서 계산합니다. 심사 만료·중지·중요 사업자 정보 변경으로 승인이 무효화되면 배지도 사라집니다. 열린 화면에서도 60초마다, 그리고 창 활성화·표시 상태 변경 시 기존 배지를 재확인합니다. 배지 설명에는 유효기간을 표시하며 비공개 검수 자료는 포함하지 않습니다. 매물별 승인 정책은 변경하지 않았습니다.
-
-현재 배지는 **ӨРӨӨ 플랫폼의 로컬 검수 데모**라는 표시를 포함합니다. DAN 인증·정부 허가·개별 매물의 진위 보증을 나타내지 않습니다. 실제 DAN 인증 배지는 공식 연동 결과를 서버에서 검증한 뒤 별도로 추가해야 합니다. PRO 사업자 설정과 ADMIN 중개사 화면의 **Тэмдгийн загвар** 버튼은 승인 상태를 변경하지 않는 디자인 미리보기입니다.
-
-배지 검증은 `verify-broker-verification.cjs`와 `verify-office-profile.cjs`에 포함했습니다. 승인 전·1차 심사·예시/소유주/알 수 없는 사업자의 배지 제외, 최종 승인 후 모든 표시 위치, 정보 변경·중지·만료 시 제거, 열린 화면의 만료 제거와 공개 프로필 연결을 검증했습니다. PC와 390px 모바일 브라우저에서 미리보기 버튼·문양·문구·창 너비와 가로 넘침 없음을 확인했습니다. 기존 사업자 정보를 임의로 승인하거나 변경하지 않았습니다. 화면은 `qa/broker-badge.jpg`, `qa/broker-badge-mobile.jpg`입니다.
-
-중개사는 PRO → 사업자 정보/승인 신청, 관리자는 ADMIN → 중개사에서 진행합니다.
-
-- 승인 전·미신청·자료 보완·반려·중지·만료·재심사 상태에서는 중개사 매물을 공개하지 않습니다. 회사 이름 변경이나 PRO 공개 선택으로 우회되지 않습니다. 기존 간단 승인 기록은 새 심사를 통과한 것으로 인정하지 않습니다.
-- 사업자 이름·사업자 등록번호·대리인·연락처·이메일·주소·면허 번호·유효기간과 4종 자료 참조 번호를 요구합니다. 연락처 형식 검사를 본인/전화 인증으로 표시하지 않습니다.
-- 1차: 사업자 등록, 중개 면허, 대리 권한, 본인 확인, 실제 사무실, 공식 출처 연락처 확인의 6개 체크와 각각의 근거·검토자 코드·확인일·심사 의견이 필요합니다.
-- 2차: 다른 검토자 코드, 독립적인 재확인과 1차 자료 검토, 심사 의견이 필요합니다. 단계 생략·동일 코드·변경된 신청서·기간 초과 승인을 차단합니다.
-- 내부 심사 유효기간은 최대 90일이며 면허 유효기간 및 1차 승인 기간을 넘지 않습니다. 1차 자료 확인일은 최종 승인 시 최근 30일 이내여야 합니다. 이 기간은 내부 정책으로 법정 기간을 설명하는 것이 아닙니다.
-- 주요 사업자 정보 변경 시 재신청/재심사합니다. 신청마다 버전을 부여하고 오래된 심사 창을 차단합니다. 중지 상태는 새 신청으로 해제할 수 없으며 관리자가 재심사로 전환해야 합니다.
-- 승인된 중개사도 새/수정 매물은 별도 심사를 받습니다. 이 보호는 설정에서 끌 수 없습니다. 일반 소유주 매물은 기존 정책을 유지합니다.
-- 광고 신청·승인·노출도 광고주의 중개사 승인이 필요합니다. 과거 승인 광고가 소유주 매물을 가리켜도 미승인 광고주에게 노출 권한을 주지 않습니다.
-- 이전 심사 근거·검토자 코드·의견·결정 이력을 보존합니다. 원본 신분증·개인 등록번호·은행 정보·증빙 파일을 이번 데모에 업로드하거나 저장하지 않습니다. 자료 필드는 보호된 보관소/확인 케이스의 참조 번호를 기록하는 자리입니다.
-
-공식 수동 대조 경로: [e-Business 사업자 조회](https://e-business.mn/en/home), [몽골 금융규제위원회 허가 시스템](https://license.frc.mn/). 링크 제공은 기관 API 연결이나 실제 서류 진위 확인을 의미하지 않습니다.
-
-운영에는 실제 관리자 인증·서버 권한 검사·계정 ID에 묶인 서로 다른 2인의 승인·공인 본인/전화 확인·기관 조회·접근이 제한된 증빙 스토리지·서버 감사 기록이 필요합니다. 현재 검토자 코드는 데모 입력값이므로 실제 2명의 독립된 직원임을 보증하지 않습니다. localStorage는 보안 경계가 아닙니다. 현지 운영 기준은 별도로 확인해야 합니다.
-
-검증: `node verify-broker-verification.cjs` 및 기존 전체 검증. 브라우저에서는 미완성 정보로 신청 실패, 미신청 사업자의 즉시 승인 버튼 부재, 기존 PRO 새로고침 후 공개 매물 0건과 대기 안내, 390px 가로 넘침 없음과 승인 차단 창을 확인했습니다. 성공적인 1·2차 승인·만료·재심사·중지 시나리오는 합성 자료로 자동 검증했으며 실제 기관/신원 확인을 수행하지 않았습니다. 화면: `qa/broker-verification.jpg`, `qa/broker-approval-blocked.jpg`, `qa/broker-verification-mobile.jpg`.
-
-## 매물 위치 선택과 지도 연결
-
-- 일반 등록과 PRO 등록 모두 1단계에서 지도 클릭, 핀 이동, 지도 중심 선택 또는 직접 좌표 입력으로 위치를 지정합니다. 좌표를 지정해야 다음 단계/최종 저장을 진행할 수 있습니다. 기본 지도 중심과 예시 구역 중심은 실제 매물 위치로 자동 저장되지 않습니다.
-- 공개 장소 검색은 검색 버튼/Enter를 눌렀을 때만 [Photon](https://github.com/komoot/photon)의 공개 데모 API에 요청합니다. 몽골 국가 코드와 범위를 지정하고 반환 좌표도 검사합니다. 자동 완성·주소 자동 전송·역지오코딩은 사용하지 않습니다. 검색어 외에 등록 폼의 주소/호수/전화/선택한 핀 좌표는 검색 서비스로 보내지 않습니다. 결과를 선택해도 입력한 주소를 자동 덮어쓰지 않으므로 사용자가 실제 건물 위치와 주소를 대조해야 합니다.
-- 연속 요청 제한, 최대 30개 검색 메모리 캐시, 15초 제한, 취소/오래된 응답 차단, 오류 안내가 있습니다. 검색 실패 시 지도 클릭 또는 직접 좌표 입력을 사용할 수 있습니다. Photon 공개 데모는 요청량/가용성을 보장하지 않으므로 실서비스는 자체 Photon 또는 계약된 지오코딩 API와 서버 제한/캐시로 교체해야 합니다. 교체 지점은 `dist/listing-map.js`의 `LISTING_PLACE_ENDPOINT`입니다.
-- 시/아이막·구/솜·호로·거리·건물 번호를 바꾸면 이전 핀을 지우고 다시 선택하게 합니다. 호수와 설명 수정은 핀을 유지합니다. 핀은 임시 저장·새로고침·편집·최종 미리보기에도 보존합니다.
-- 공개 가능한 일반 매물 저장 후 해당 좌표로 확대한 소비자 지도로 이동합니다. PRO 또는 심사 대기 매물은 작업 목록으로 돌아가 등록자용 위치 미리보기를 엽니다. 기존 승인 규칙을 통과하지 못한 매물은 공개 지도에 노출하지 않습니다. 내 매물/PRO 목록에서 위치 미리보기를 다시 열 수 있습니다.
-- 실제 좌표가 있는 로컬 매물은 건물 핀으로 표시하고, 예시 구역 수에 중복 집계하지 않습니다. 기존 데모 매물의 구역 중심은 계속 예시 위치로 구분합니다.
-- 소비자 지도 하단과 매물 상세 위치 카드에서는 별도의 MAPS.ME 실행 버튼을 제거했습니다. 상세의 ‘지도에서 보기’가 플랫폼 내 지도에서 해당 위치를 보여 줍니다.
-- 현재 저장소는 같은 브라우저의 `localStorage`입니다. 여러 사용자에게 실시간 공유하려면 인증된 서버 API와 DB에 이 좌표를 저장하고 공개 승인 조건으로 조회해야 합니다. 지도 배경은 OpenFreeMap/OpenStreetMap이며 MAPS.ME는 앱 열기 링크로 유지합니다.
-
-검증: `node verify-listing-map.cjs`와 기존 전체 검증. 필수 위치·유효 범위·클릭/드래그 저장·주소 변경 초기화·호수 비공개·편집 복원·공개 지도 이동·대기 매물 차단·검색 응답 검사/캐시/오류/취소·실제 핀/구역 수 중복 방지를 확인합니다.
+DAN, government registry lookups, email ownership/recovery delivery, staff MFA, payments and e-contract execution are not connected. Automated backups/restore drills, operational alerts, legal policies and realistic Mongolia-based load tests remain launch work. Advertising currently records requests and does not charge money or automatically buy placement.
