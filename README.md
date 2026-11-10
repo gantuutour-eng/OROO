@@ -1,3 +1,13 @@
+# Өрөө — server-backed release
+
+The Cloudflare deployment uses real session authentication, D1 and private R2. See [CLOUD-OPERATIONS.md](CLOUD-OPERATIONS.md) for the architecture, data flow, deployment and launch limitations.
+
+Run `node verify-all.cjs` with Node 24. The local `node preview.cjs` command remains a separate demonstration mode and does not connect production data.
+
+The following prototype documentation describes the local demonstration, not production authentication or storage.
+
+---
+
 # Өрөө — 몽골어 부동산 데모
 
 GitHub 저장소: [gantuutour-eng/OROO](https://github.com/gantuutour-eng/OROO). `dist`에 실행 코드와 로고, `qa`에 화면 검증 자료, 루트에 미리보기 서버와 검증 스크립트가 있습니다. `.openai` 등 로컬 도구 설정과 자격정보는 업로드에서 제외합니다. 루트의 `connect-*`, `update-*`, `finish-*` 등은 이전 개발 단계에서 사용한 일회성 변경 스크립트이며 실행에 필요하지 않습니다. 현재 화면을 실행하려면 아래의 `preview.cjs`만 사용하세요.

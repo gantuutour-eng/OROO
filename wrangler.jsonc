@@ -1,9 +1,22 @@
 {
   "name": "oroo",
+  "main": "server/worker.mjs",
   "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": true,
   "assets": {
-    "directory": "./dist"
-  }
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/runtime-config.js"]
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "oroo-main",
+    "database_id": "372ec34b-1676-4849-8c57-9ad60322b713",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{"binding": "MEDIA", "bucket_name": "oroo-media"}],
+  "observability": {"enabled": true, "head_sampling_rate": 0.05},
+  "triggers": {"crons": ["17 * * * *"]}
 }
