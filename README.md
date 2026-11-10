@@ -10,11 +10,13 @@ GitHub 저장소: [gantuutour-eng/OROO](https://github.com/gantuutour-eng/OROO).
 
 ## Cloudflare 자동 배포
 
+- 공개 주소: [oroo.gantuutour.workers.dev](https://oroo.gantuutour.workers.dev/). 첫 배포에서 Cloudflare 빌드의 검증 14개와 웹 자산 35개 업로드가 통과했습니다.
 - GitHub: `gantuutour-eng/OROO`, 운영 브랜치 `main`.
 - Cloudflare Workers 프로젝트 이름: `oroo`. `wrangler.jsonc`의 `assets.directory`는 `./dist`이며 실행 HTML/CSS/JS와 로고만 웹 자산으로 배포합니다. 루트의 개발 스크립트·README·QA 캡처는 웹 자산에 포함하지 않습니다.
 - 루트 경로 `/`, 빌드 명령 `node verify-all.cjs`, 배포 명령 `npx wrangler deploy`. 검증 스크립트가 실패하면 배포 단계로 진행하지 않습니다. 로컬에서도 `node verify-all.cjs`로 전체 검증을 실행할 수 있습니다.
 - 연결 후 `main`의 새 커밋은 Cloudflare Workers Builds가 자동으로 검증하고 배포합니다. 실제 연결·빌드·배포 이력은 Cloudflare의 OR​​OO 프로젝트 화면에서 확인합니다.
 - 현재 배포 대상은 `localStorage` 기반 웹 프로토타입입니다. Cloudflare에 배포하는 것만으로 사용자 인증·서버 권한 검사·D1/R2 연결·DAN 인증·결제 기능이 생기지 않습니다. 회원/사업장별 인증과 권한을 먼저 구현하고, 매물·문의·심사 데이터는 서버 DB로, 사진은 보호된 업로드 API를 통한 오브젝트 스토리지로 이전해야 합니다.
+- 공개 주소는 로컬 미리보기와 다른 출처이므로 `127.0.0.1`에 저장한 작성 중 매물·PRO 정보·심사 기록을 자동으로 가져오지 않습니다.
 
 ## Өрөө ADMIN 최고 관리자
 
@@ -160,7 +162,7 @@ UIBowl의 다방 웹 레퍼런스에서 공개된 주요 패턴을 확인해 기
 
 로컬 미리보기의 실제 브라우저에서 검색 추천, 필터 결과, 몽골 지도, 상세 문의 저장과 마이페이지 조회, 등록 전 단계와 미리보기/저장, 새로고침 후 등록 유지/삭제, 저장한 검색 복원, 단지 찜, 공지 상세/복귀, 중개사 지역/상품 선택과 문의 내역을 확인했습니다. 신규 로고의 이미지 로딩도 확인했습니다. 추가 브라우저 검증에서 지역·방 수·차고·가격의 복합 적용과 지도 마커 수, 정렬, 개선된 상세 아이콘·찜·문의 버튼, 투그릭 등록/미리보기/저장/새로고침을 확인했고 테스트 매물은 삭제했습니다. 확인 화면은 `qa/icons-and-mnt.jpg`, `qa/mnt-detail-prices.jpg`, `qa/mnt-price-filter.jpg`, `qa/mongolia-location.jpg`에 있습니다. 화면 검증은 데스크톱 기본 뷰포트에서 수행했으며, MAPS.ME 설치 앱 실행은 검증하지 않았습니다.
 
-웹 서비스의 공개 배포는 수행하지 않았습니다.
+웹 화면은 위 Cloudflare 공개 주소로 배포했습니다. 실제 서비스용 인증·서버 DB·이미지 업로드 스토리지 연결은 아직 구현되지 않았습니다.
 아이콘/필터 CSS는 기존 760px 모바일 기준을 따릅니다. 지역 선택창은 850px, 방 수 선택창은 680px을 최대 폭으로 사용하며 좁은 화면에서는 가용 폭에 맞춥니다. 가격 숫자와 ₮ 기호는 같은 줄에 유지합니다.
 
 확장 등록 폼은 최대 1230px이며 기존 1000px/760px 기준에서 입력 열과 안내 패널을 재배치합니다. 데스크톱 브라우저에서 단계 이동, 종속 지역 선택, 옵션·금액 입력, 임시 저장·새로고침 복원, 필수 사진 누락 안내를 확인했습니다. 등록/수정/재실행 데이터 연결은 위 코드 검증을 통과했습니다. 필터 버튼의 상단 위치와 높이(44px) 일치를 실제 DOM과 화면으로 확인했습니다. 증거 화면: `qa/listing-editor-facilities.jpg`, `qa/filter-actions-aligned.jpg`.
