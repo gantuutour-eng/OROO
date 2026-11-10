@@ -9,6 +9,7 @@ function database(){
  return {db,prepare:wrap,async batch(statements){db.exec('BEGIN');try{const out=[];for(const q of statements)out.push(await q.run());db.exec('COMMIT');return out}catch(e){db.exec('ROLLBACK');throw e}}};
 }
 async function main(){
+ globalThis.FixedLengthStream=class extends TransformStream{constructor(expected){let size=0;super({transform(chunk,controller){size+=chunk.length;if(size>expected)throw Error('length_mismatch');controller.enqueue(chunk)},flush(){if(size!==expected)throw Error('length_mismatch')}})}};
  const {default:worker}=await import('./server/worker.mjs'),core=await import('./server/core.mjs');const DB=database(),objects=new Map();
  const env={DB,MEDIA:{async put(key,body){const bytes=Buffer.from(await new Response(body).arrayBuffer());objects.set(key,bytes)},async get(key){const data=objects.get(key);return data?{body:data,size:data.length,httpEtag:'"'+core.sha(data)+'"'}:null},async delete(keys){for(const key of [].concat(keys))objects.delete(key)}},ASSETS:{fetch:()=>new Response('asset')}};
  let count=0;async function call(path,{actor=null,method='GET',body,origin='https://oroo.test',csrf=true,headers={}}={}){
