@@ -67,7 +67,7 @@ export async function listingRoute(request,env,url,user,requestId){
  const state=enumValue(body.listingStatus||'published',['draft','published','hidden','closed']),stamp=now();
  const mutationId=uuid(),requestHash=sha(JSON.stringify({d,photoIds,state}));let key=old?.request_key;
  if(!old){key=text(body.requestKey,100,true);if(!/^[a-zA-Z0-9_-]{12,100}$/.test(key))fail(422,'invalid_request_key');const existing=await first(env,'SELECT id,request_hash FROM listings WHERE owner_id=? AND request_key=?',user.id,key);if(existing){if(existing.request_hash!==requestHash)fail(409,'idempotency_conflict');return json({item:(await listingDTOs(env,[await first(env,select+' WHERE l.id=?',existing.id)],true))[0],replayed:true})}}
- const media=await all(env,`SELECT * FROM media WHERE id IN (${photoIds.map(()=>'?').join(',')}) AND owner_id=? AND full_ready=1 AND thumb_ready=1`,...photoIds,user.id);
+ const media=await all(env,`SELECT * FROM media WHERE id IN (${photoIds.map(()=>'?').join(',')}) AND owner_id=? AND full_ready=1 AND thumb_ready=1 AND NOT EXISTS(SELECT 1 FROM journal_media jm WHERE jm.media_id=media.id)`,...photoIds,user.id);
  if(media.length!==photoIds.length||media.some(m=>m.listing_id!==null&&m.listing_id!==id))fail(403,'invalid_photo_ownership');
  const org=d.contactRole==='agent'?await ownOrg(env,user):null;if(d.contactRole==='agent'&&!org)fail(422,'organization_required','Эхлээд PRO байгууллагын мэдээллээ бүртгэнэ үү.');
  if(org)d.agencyName=org.name;
@@ -88,7 +88,7 @@ export async function listingRoute(request,env,url,user,requestId){
   ...photoIds.map((photo,index)=>stmt(env,`UPDATE media SET listing_id=(${lookup}),position=?,expires_at=0 WHERE id=? AND owner_id=? AND EXISTS(${lookup})`,user.id,key,mutationId,index,photo,user.id,user.id,key,mutationId)),
   bumpPublic(env),
   stmt(env,`INSERT INTO audit(actor_id,action,target_type,target_id,detail,request_id,created_at) SELECT ?,?,'listing',CAST(id AS TEXT),?,?,? FROM listings WHERE owner_id=? AND request_key=? AND mutation_id=?`,user.id,old?'listing_updated':'listing_created',JSON.stringify({moderation:'pending'}),requestId,stamp,user.id,key,mutationId)
- ])}catch(error){if(String(error).includes('photo_already_attached'))fail(409,'photo_already_attached');if(!old&&String(error).includes('UNIQUE')){const existing=await first(env,'SELECT id,request_hash FROM listings WHERE owner_id=? AND request_key=?',user.id,key);if(existing?.request_hash===requestHash)return json({item:(await listingDTOs(env,[await first(env,select+' WHERE l.id=?',existing.id)],true))[0],replayed:true});fail(409,'idempotency_conflict')}throw error}
+ ])}catch(error){if(/photo_already_attached|media_in_use/.test(String(error)))fail(409,'photo_already_attached');if(!old&&String(error).includes('UNIQUE')){const existing=await first(env,'SELECT id,request_hash FROM listings WHERE owner_id=? AND request_key=?',user.id,key);if(existing?.request_hash===requestHash)return json({item:(await listingDTOs(env,[await first(env,select+' WHERE l.id=?',existing.id)],true))[0],replayed:true});fail(409,'idempotency_conflict')}throw error}
  if(!saved[0].results?.length)fail(409,'revision_conflict');resultId=saved[0].results[0].id;
  return json({item:(await listingDTOs(env,[await first(env,select+' WHERE l.id=?',resultId)],true))[0]},old?200:201);
 }

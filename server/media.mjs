@@ -36,8 +36,9 @@ export async function mediaRoute(request,env,url,user,ctx){
  const image=path.match(/^\/api\/media\/([a-f0-9-]{36})\/(full|thumb)$/);
  if(image&&method==='GET'){
   if(!env.MEDIA)fail(503,'storage_unavailable');const [,id,variant]=image,record=await first(env,'SELECT m.*,l.owner_id AS listing_owner FROM media m LEFT JOIN listings l ON l.id=m.listing_id WHERE m.id=?',id);
-  if(!record||!record[variant+'_ready'])fail(404,'image_not_found');
-  const publicRow=record.listing_id&&await first(env,'SELECT l.id FROM listings l LEFT JOIN organizations o ON o.id=l.organization_id WHERE l.id=? AND '+publicPredicate,record.listing_id);
+  if(!record||record[variant+'_ready']!==1)fail(404,'image_not_found');
+  const publicListing=record.listing_id&&await first(env,'SELECT l.id FROM listings l LEFT JOIN organizations o ON o.id=l.organization_id WHERE l.id=? AND '+publicPredicate,record.listing_id);
+  const publicJournal=!record.listing_id&&await first(env,"SELECT j.id FROM journal_media jm JOIN journal j ON j.id=jm.journal_id WHERE jm.media_id=? AND j.status='published' AND j.published_at<=?",id,now());const publicRow=publicListing||publicJournal;
   const own=user&&(record.owner_id===user.id||['admin','moderator'].includes(user.role));if(!publicRow&&!own)fail(404,'image_not_found');
   const cache=publicRow&&globalThis.caches?.default,cacheKey=new Request(new URL('/api/_media-cache/'+id+'/'+variant,url).href);const cached=cache&&await cache.match(cacheKey);
   if(cached){const headers=new Headers(cached.headers);headers.set('cache-control','private, max-age=60');if(request.headers.get('if-none-match')===headers.get('etag'))return new Response(null,{status:304,headers});return new Response(cached.body,{headers})}
@@ -48,7 +49,7 @@ export async function mediaRoute(request,env,url,user,ctx){
  return null;
 }
 export async function maintenance(env){
- if(!env.DB)return;const expired=await all(env,'SELECT id,full_key,thumb_key FROM media WHERE listing_id IS NULL AND expires_at<? ORDER BY expires_at LIMIT 10',seconds());
- for(const item of expired){if(env.MEDIA)await env.MEDIA.delete([item.full_key,item.thumb_key]);await run(env,'DELETE FROM media WHERE id=? AND listing_id IS NULL',item.id)}
+ if(!env.DB||!env.MEDIA)return;const expired=await all(env,'UPDATE media SET expires_at=-1 WHERE id IN(SELECT id FROM media WHERE listing_id IS NULL AND expires_at<? AND NOT EXISTS(SELECT 1 FROM journal_media jm WHERE jm.media_id=media.id) ORDER BY expires_at LIMIT 10) RETURNING id,full_key,thumb_key',seconds());
+ for(const item of expired){await env.MEDIA.delete([item.full_key,item.thumb_key]);await run(env,'DELETE FROM media WHERE id=? AND listing_id IS NULL AND expires_at=-1 AND NOT EXISTS(SELECT 1 FROM journal_media jm WHERE jm.media_id=media.id)',item.id)}
  await env.DB.batch([stmt(env,'DELETE FROM sessions WHERE token_hash IN (SELECT token_hash FROM sessions WHERE expires_at<? LIMIT 500)',seconds()),stmt(env,'DELETE FROM rate_limits WHERE rowid IN (SELECT rowid FROM rate_limits WHERE window<? LIMIT 500)',seconds()-86400)]);
 }

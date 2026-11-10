@@ -3,6 +3,7 @@ import {authRoute} from './auth.mjs';
 import {listingRoute} from './listings.mjs';
 import {mediaRoute,maintenance} from './media.mjs';
 import {operationsRoute} from './operations.mjs';
+import {journalRoute} from './journal.mjs';
 
 export default {
  async fetch(request,env,ctx){
@@ -17,7 +18,7 @@ export default {
     let cacheKey,cache=cacheable&&globalThis.caches?.default;
     if(cache){const version=await first(env,"SELECT value FROM app_meta WHERE key='public_version'");const cacheUrl=new URL(request.url);cacheUrl.pathname='/api/_search-cache'+url.pathname;cacheUrl.searchParams.set('_version',version.value);cacheUrl.searchParams.set('_day',new Date().toISOString().slice(0,10));cacheKey=new Request(cacheUrl);const cached=await cache.match(cacheKey);if(cached){response=new Response(cached.body,{headers:{...Object.fromEntries(cached.headers),'cache-control':'no-store','x-oroo-cache':'HIT'}})}}
     if(!response)response=await authRoute(request,env,url.pathname,requestId);
-    if(!response){const user=await session(env,request);response=await mediaRoute(request,env,url,user,ctx)||await listingRoute(request,env,url,user,requestId)||await operationsRoute(request,env,url,user,requestId)}
+    if(!response){const user=await session(env,request);response=await mediaRoute(request,env,url,user,ctx)||await listingRoute(request,env,url,user,requestId)||await journalRoute(request,env,url,user,requestId)||await operationsRoute(request,env,url,user,requestId)}
     if(!response)fail(404,'not_found');
     if(cache&&response.ok&&!response.headers.has('x-oroo-cache')){const copy=response.clone();ctx.waitUntil(cache.put(cacheKey,new Response(copy.body,{headers:{'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=30'}})))}
    }
