@@ -30,7 +30,7 @@ export async function mediaRoute(request,env,url,user,ctx){
   if(!record||record.listing_id!==null||record.expires_at<seconds())fail(404,'upload_not_found');if(record[variant+'_ready']===1)return json({ok:true,replayed:true});
   if(request.headers.get('content-type')!=='image/jpeg')fail(415,'jpeg_required');const length=Number(request.headers.get('content-length'));if(!Number.isSafeInteger(length)||length<32||length>(variant==='thumb'?200*1024:2*1024*1024)||!request.body)fail(413,'invalid_image_size');
   const lock=await first(env,`UPDATE media SET ${variant}_ready=-1 WHERE id=? AND owner_id=? AND listing_id IS NULL AND ${variant}_ready=0 RETURNING id`,id,user.id);if(!lock)fail(409,'upload_in_progress');
-  try{await env.MEDIA.put(record[variant+'_key'],checkedJPEG(request.body,length,variant),{httpMetadata:{contentType:'image/jpeg'},customMetadata:{ownerId:user.id,mediaId:id}})}catch{await run(env,`UPDATE media SET ${variant}_ready=0 WHERE id=? AND ${variant}_ready=-1`,id);fail(422,'invalid_image','JPEG зураг бүрэн, зөв эсэхийг шалгана уу.')}
+  try{let stream=checkedJPEG(request.body,length,variant);if(typeof FixedLengthStream==='function')stream=stream.pipeThrough(new FixedLengthStream(length));await env.MEDIA.put(record[variant+'_key'],stream,{httpMetadata:{contentType:'image/jpeg'},customMetadata:{ownerId:user.id,mediaId:id}})}catch{await run(env,`UPDATE media SET ${variant}_ready=0 WHERE id=? AND ${variant}_ready=-1`,id);fail(422,'invalid_image','JPEG зураг бүрэн, зөв эсэхийг шалгана уу.')}
   await run(env,`UPDATE media SET ${variant}_ready=1,${variant}_size=? WHERE id=? AND owner_id=?`,length,id,user.id);return json({ok:true},201);
  }
  const image=path.match(/^\/api\/media\/([a-f0-9-]{36})\/(full|thumb)$/);

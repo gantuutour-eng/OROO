@@ -70,6 +70,7 @@ export async function listingRoute(request,env,url,user,requestId){
  const media=await all(env,`SELECT * FROM media WHERE id IN (${photoIds.map(()=>'?').join(',')}) AND owner_id=? AND full_ready=1 AND thumb_ready=1`,...photoIds,user.id);
  if(media.length!==photoIds.length||media.some(m=>m.listing_id!==null&&m.listing_id!==id))fail(403,'invalid_photo_ownership');
  const org=d.contactRole==='agent'?await ownOrg(env,user):null;if(d.contactRole==='agent'&&!org)fail(422,'organization_required','Эхлээд PRO байгууллагын мэдээллээ бүртгэнэ үү.');
+ if(org)d.agencyName=org.name;
  const args=[org?.id||null,d.type,d.province,d.area,d.khoroo,d.name,d.address,d.latitude,d.longitude,d.deal,d.price,d.rentPeriod,d.size,d.floor,d.rooms===null?null:String(d.rooms),d.year,JSON.stringify(d),state,stamp];
  let resultId=id;let saveStatement;
  if(old){
